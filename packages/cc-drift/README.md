@@ -11,8 +11,12 @@ compares it against the numbers your documentation claims.
 cc-drift check                          # current directory
 cc-drift check --project myapp          # a project under your workspace root
 cc-drift check --all --threshold 20     # every project, 20% tolerance
+cc-drift --base ~/code check --all      # scan a different projects root
 cc-drift install-hook --threshold 30    # pre-commit hook
 ```
+
+`--base` is an option of the main command, so it goes before the subcommand
+(`cc-drift --base ~/code check`, not `cc-drift check --base ~/code`).
 
 Exit codes: `0` no drift, `1` error, `2` drift at or above the threshold.
 

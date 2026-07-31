@@ -1,5 +1,7 @@
 # claude-code-toolkit
 
+[![CI](https://github.com/VFK00/claude-code-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/VFK00/claude-code-toolkit/actions/workflows/ci.yml)
+
 **Keep your coding agents' context honest.**
 
 Every tool in this space measures what agents *consume* — tokens, dollars, sessions.
