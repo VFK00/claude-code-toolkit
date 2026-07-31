@@ -36,7 +36,11 @@ MODEL_RX = re.compile(
     r"^model\s+\w+\s*\{|class\s+\w+\s*\(.*(Model|Base|Entity|Schema|Table)|@Entity",
     re.MULTILINE,
 )
-TEST_RX = re.compile(r"^\s*def\s+test_|^\s*it\(|^\s*test\(|^\s*describe\(", re.MULTILINE)
+# `async def test_` est la forme normale sous pytest-asyncio : l'omettre
+# sous-compte tout projet a tests asynchrones, et l'ecart remonte a tort en drift.
+TEST_RX = re.compile(
+    r"^\s*(?:async\s+)?def\s+test_|^\s*it\(|^\s*test\(|^\s*describe\(", re.MULTILINE
+)
 
 # `model X {` cote Prisma, tolerant a l'accolade rejetee a la ligne suivante.
 PRISMA_MODEL_RX = re.compile(r"^model\s+\w+", re.MULTILINE)

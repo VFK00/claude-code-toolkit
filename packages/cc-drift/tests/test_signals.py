@@ -265,3 +265,17 @@ def test_dossier_tests_compte_quel_que_soit_le_nom_de_fichier(tmp_path):
     d.mkdir()
     (d / "helpers.py").write_text("def test_a():\n    pass\ndef test_b():\n    pass\n")
     assert extract_code_signals(tmp_path).tests == 2
+
+
+def test_tests_async_sont_comptes(tmp_path):
+    """`async def test_` est la forme normale avec pytest-asyncio.
+
+    La regex n'acceptait que `def test_` : tout projet a tests asynchrones
+    etait sous-compte, et l'ecart signale a tort comme un drift de doc.
+    """
+    (tmp_path / "test_async.py").write_text(
+        "async def test_a() -> None:\n    pass\n"
+        "async def test_b() -> None:\n    pass\n"
+        "def test_c() -> None:\n    pass\n"
+    )
+    assert extract_code_signals(tmp_path).tests == 3
