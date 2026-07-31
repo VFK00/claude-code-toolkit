@@ -2,37 +2,42 @@
 
 [![CI](https://github.com/VFK00/claude-code-toolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/VFK00/claude-code-toolkit/actions/workflows/ci.yml)
 
-**Keep your coding agents' context honest.**
+**Gardez honnête le contexte de vos agents.**
 
-Every tool in this space measures what agents *consume* — tokens, dollars, sessions.
-None measures the quality of what you *give them to read*.
+Tous les outils de ce domaine mesurent ce que les agents *consomment* — jetons,
+dollars, sessions. Aucun ne mesure la qualité de ce qu'on leur *donne à lire*.
 
-A `CLAUDE.md` that lies degrades every session that loads it, silently. These tools find that.
+Un `CLAUDE.md` qui ment dégrade chaque session qui le charge, en silence. Ces
+outils le trouvent.
 
-## Tools
+## Les outils
 
-| Command | What it answers |
-|---------|-----------------|
-| `cc-drift` | Does my `CLAUDE.md` still match the code? |
-| `cc-memory` | What is actually in my agent memories? |
-| `cc-spend` | What did Claude Code cost, per project and model? |
-| `cc-run` | Run one command across many projects, in parallel. |
+| Commande | Ce qu'elle répond |
+|----------|-------------------|
+| `cc-drift` | Mon `CLAUDE.md` correspond-il encore au code ? |
+| `cc-memory` | Que contiennent réellement mes mémoires d'agent ? |
+| `cc-spend` | Combien Claude Code a-t-il coûté, par projet et par modèle ? |
+| `cc-run` | Lancer une commande sur plusieurs projets, en parallèle. |
 
-`cc-drift` and `cc-memory` are the reason this exists. `cc-spend` and `cc-run` are
-utilities — if you only want spend tracking, [ccusage](https://ccusage.com) does more.
+`cc-drift` et `cc-memory` sont la raison d'être de ce dépôt. `cc-spend` et
+`cc-run` sont des utilitaires — pour le seul suivi de coût,
+[ccusage](https://ccusage.com) en fait davantage.
 
-## Install
+## Installation
 
 ```bash
 uv tool install git+https://github.com/VFK00/claude-code-toolkit#subdirectory=packages/cc-drift
 ```
 
-Repeat with `cc-memory`, `cc-spend`, `cc-run` as needed.
+Répéter avec `cc-memory`, `cc-spend`, `cc-run` selon les besoins.
 
-## What it looks like
+Les options globales (`--db`, `--base`, `--match`…) se placent **avant** la
+sous-commande : `cc-spend --db autre.db scan`, et non l'inverse.
 
-A project whose `CLAUDE.md` claims eight routes and twelve tests, against code
-holding three and two:
+## À quoi ça ressemble
+
+Un projet dont le `CLAUDE.md` annonce huit routes et douze tests, face à un
+code qui en contient trois et deux :
 
 ```console
 $ cc-drift check --project demo-app
@@ -51,10 +56,11 @@ $ echo $?
 2
 ```
 
-Exit `2` means drift at or above the threshold — enough for a pre-commit hook
-or a CI step. `cc-drift install-hook` writes that hook for you.
+Le code de sortie `2` signale un écart au-delà du seuil — de quoi alimenter un
+hook de pré-commit ou une étape de CI. `cc-drift install-hook` écrit ce hook
+pour vous.
 
-Cost, per model, from your local transcripts:
+Le coût, par modèle, depuis vos transcripts locaux :
 
 ```console
 $ cc-spend scan
@@ -75,39 +81,47 @@ $ cc-spend report --by model
 └───────────────────┴────────┴────────┴────────────┴──────────┘
 ```
 
-Note the second block of the scan. One line was unreadable, so it is **counted
-and shown**, with its reason and where to find it. A tool that quietly drops
-part of its input and exits `0` reports a false result — see below.
+Les sorties des commandes sont en anglais.
 
-## Why this exists
+Regardez le second bloc du scan. Une ligne était illisible : elle est donc
+**comptée et affichée**, avec son motif et l'endroit où la trouver. Un outil
+qui abandonne discrètement une partie de son entrée et sort en `0` produit un
+résultat faux — voir plus bas.
 
-Real findings from a single audit session on a 16-project workspace:
+Même principe pour les tarifs : un modèle absent de la table est compté zéro,
+et `cc-spend report` le dit, avec le volume de jetons concerné.
 
-- a `CLAUDE.md` claiming **25 scripts** when 24 existed
-- a local LLM stack documented as live, **dead for 28 days**
-- **6 memory files** describing 8 deleted binaries, still injected on recall
-- a drift detector reporting **22 models where 11 existed** — this one was in
-  an early version of `cc-drift` itself
+## Pourquoi ce dépôt existe
 
-Each costs context and produces wrong answers, on every session, until someone
-finds it by hand.
+Constats réels d'une seule session d'audit sur un espace de travail de seize
+projets :
 
-That last item is why two rules govern every ingestion path here:
+- un `CLAUDE.md` annonçant **25 scripts** quand il en existait 24
+- une pile LLM locale documentée comme vivante, **morte depuis 28 jours**
+- **6 fichiers mémoire** décrivant 8 binaires supprimés, toujours injectés au
+  rappel
+- un détecteur d'écart signalant **22 modèles là où il y en avait 11** — celui-là
+  se trouvait dans une version antérieure de `cc-drift` lui-même
 
-- **Never raise on one bad entry.** A malformed line costs that line, never the
-  file, never the run.
-- **Never discard in silence.** Whatever is skipped is reported with its reason.
+Chacun coûte du contexte et produit de mauvaises réponses, à chaque session,
+jusqu'à ce que quelqu'un le trouve à la main.
 
-They were not written upfront. They come from a stress test on a real corpus,
-where `cc-spend` was found to be skipping **53 % of transcripts** — subagent
-runs live deeper in the tree than the scanner looked — while printing `OK` and
-exiting `0`.
+Ce dernier point explique les deux règles qui gouvernent ici toute ingestion :
 
-## Related
+- **Ne jamais échouer sur une entrée fautive.** Une ligne malformée coûte cette
+  ligne, jamais le fichier, jamais l'exécution.
+- **Ne jamais écarter en silence.** Ce qui est sauté est signalé avec son motif.
 
-[panelize-code](https://github.com/VFK00/panelize-code) — config-driven terminal
-dashboards. Same author, separate tool.
+Elles n'ont pas été écrites d'avance. Elles viennent d'un test de charge sur un
+corpus réel, où `cc-spend` s'est révélé ignorer **53 % des transcripts** — les
+exécutions de sous-agents vivent plus profond dans l'arborescence que le
+scanner ne regardait — tout en affichant `OK` et en sortant en `0`.
 
-## License
+## Projet voisin
+
+[panelize-code](https://github.com/VFK00/panelize-code) — tableaux de bord de
+terminal pilotés par configuration. Même auteur, outil distinct.
+
+## Licence
 
 MIT
