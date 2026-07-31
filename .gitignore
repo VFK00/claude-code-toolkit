@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Documentation interne, non destinee a la publication.
+docs/
+
+# Artefacts d'execution des outils de developpement.
+.superpowers/

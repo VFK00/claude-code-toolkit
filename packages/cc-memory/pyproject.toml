@@ -1,0 +1,39 @@
+[project]
+name = "cc-memory"
+version = "0.1.0"
+description = "Search across Claude Code agent memories"
+requires-python = ">=3.12"
+dependencies = ["pydantic>=2.9", "pyyaml>=6.0", "httpx>=0.27", "rich>=13.7", "cctk-core"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-cov>=5.0", "mypy>=1.11", "ruff>=0.6", "types-PyYAML>=6.0"]
+
+[project.scripts]
+cc-memory = "memory_search.cli:main"
+
+[tool.uv.sources]
+cctk-core = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/memory_search"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "--cov=src/memory_search --cov-report=term-missing --cov-fail-under=70"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM"]

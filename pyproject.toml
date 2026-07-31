@@ -1,0 +1,40 @@
+[project]
+name = "claude-code-toolkit"
+version = "0.1.0"
+description = "Keep your coding agents' context honest — CLI toolkit for Claude Code"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Felis", email = "felis.virama07@gmail.com" }]
+keywords = ["claude-code", "ai-agents", "cli", "documentation-drift", "context"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/VFK00/claude-code-toolkit"
+Issues = "https://github.com/VFK00/claude-code-toolkit/issues"
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+
+[tool.pytest.ini_options]
+addopts = "--import-mode=importlib --cov --cov-report=term-missing --cov-fail-under=70"

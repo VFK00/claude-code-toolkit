@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/ci.yml"
+  pull_request:
+    paths:
+      - "packages/**"
+      - "pyproject.toml"
+      - "uv.lock"
+
+jobs:
+  test:
+    # Depot public : runner GitHub-hosted obligatoire. Un runner self-heberge
+    # laisserait une PR de fork executer du code arbitraire sur l'infrastructure.
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@caf0cab7a618c569241d31dcd442f54681755d39 # v3
+        with:
+          enable-cache: true
+
+      - name: Setup Python
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync --all-packages --all-extras
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Type check
+        run: uv run mypy packages/*/src
+
+      - name: Tests
+        run: uv run pytest packages/ -v
