@@ -364,3 +364,44 @@ def test_cli_budget_empty(tmp_path, capsys):
     rc = main(["--db", str(tmp_path / "empty.sqlite"), "budget"])
     assert rc == 0
     assert "Aucune" in capsys.readouterr().out
+
+
+def test_cli_prog_name_help(capsys):
+    """Defaut 4 : --help annoncait encore l'ancien nom de binaire cost-tracker."""
+    with pytest.raises(SystemExit):
+        main(["--help"])
+    out = capsys.readouterr().out
+    assert "usage: cc-spend" in out
+    assert "cost-tracker" not in out
+
+
+def test_cli_prog_name_version(capsys):
+    with pytest.raises(SystemExit):
+        main(["--version"])
+    out = capsys.readouterr().out
+    assert out.startswith("cc-spend")
+
+
+def test_cli_report_empty_hint_uses_new_name(tmp_path, capsys):
+    """Le hint runtime pointait vers `cost-tracker scan`, binaire renomme cc-spend."""
+    rc = main(["--db", str(tmp_path / "empty.sqlite"), "report"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "cc-spend scan" in out
+    assert "cost-tracker" not in out
+
+
+def test_cli_daily_empty_hint_uses_new_name(tmp_path, capsys):
+    rc = main(["--db", str(tmp_path / "empty.sqlite"), "daily"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "cc-spend scan" in out
+    assert "cost-tracker" not in out
+
+
+def test_cli_budget_empty_hint_uses_new_name(tmp_path, capsys):
+    rc = main(["--db", str(tmp_path / "empty.sqlite"), "budget"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "cc-spend scan" in out
+    assert "cost-tracker" not in out

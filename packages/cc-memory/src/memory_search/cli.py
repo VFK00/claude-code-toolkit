@@ -93,7 +93,7 @@ def cmd_query(args: argparse.Namespace) -> int:
     loaded = load_all(conn, project=args.project, type_=args.type)
     conn.close()
     if not loaded:
-        console.print("[yellow]Index vide. Lance `memory-search index`.[/yellow]")
+        console.print("[yellow]Index vide. Lance `cc-memory index`.[/yellow]")
         return 0
     entries = [e for e, _ in loaded]
     embeddings = [emb for _, emb in loaded]
@@ -200,7 +200,7 @@ def cmd_stale(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="memory-search", description="Recherche cross-projet memory.")
+    p = argparse.ArgumentParser(prog="cc-memory", description="Recherche cross-projet memory.")
     p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     p.add_argument("--db", default=str(DEFAULT_DB))
     p.add_argument("--embed-model", default="nomic-embed-text")

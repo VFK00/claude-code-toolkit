@@ -136,3 +136,19 @@ def test_cli_fix_no_ai_doc(tmp_path, monkeypatch, capsys):
 def test_cli_version():
     with pytest.raises(SystemExit):
         main(["--version"])
+
+
+def test_cli_prog_name_help(capsys):
+    """Defaut 4 : --help annoncait encore l'ancien nom de binaire doc-drift."""
+    with pytest.raises(SystemExit):
+        main(["--help"])
+    out = capsys.readouterr().out
+    assert "usage: cc-drift" in out
+    assert "doc-drift" not in out
+
+
+def test_cli_prog_name_version(capsys):
+    with pytest.raises(SystemExit):
+        main(["--version"])
+    out = capsys.readouterr().out
+    assert out.startswith("cc-drift")

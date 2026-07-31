@@ -150,7 +150,7 @@ def cmd_install_hook(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="doc-drift", description="Detecteur de drift doc/code.")
+    p = argparse.ArgumentParser(prog="cc-drift", description="Detecteur de drift doc/code.")
     p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     p.add_argument(
         "--base", default=str(DEFAULT_BASE), help=f"Racine projets (defaut: {DEFAULT_BASE})."

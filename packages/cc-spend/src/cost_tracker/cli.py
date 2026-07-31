@@ -87,7 +87,7 @@ def cmd_report(args: argparse.Namespace) -> int:
     )
     conn.close()
     if not rows:
-        console.print("[yellow]Aucune donnee. Lance `cost-tracker scan` d'abord.[/yellow]")
+        console.print("[yellow]Aucune donnee. Lance `cc-spend scan` d'abord.[/yellow]")
         return 0
     title = f"Cout Claude Code par {args.by}"
     if args.since:
@@ -156,7 +156,7 @@ def cmd_daily(args: argparse.Namespace) -> int:
     rows = daily_rows(conn, since=args.since, project=args.project)
     conn.close()
     if not rows:
-        console.print("[yellow]Aucune donnee. Lance `cost-tracker scan` d'abord.[/yellow]")
+        console.print("[yellow]Aucune donnee. Lance `cc-spend scan` d'abord.[/yellow]")
         return 0
     title = f"Cout journalier (derniers {args.since or 'all'})"
     if args.project:
@@ -191,7 +191,7 @@ def cmd_budget(args: argparse.Namespace) -> int:
     rows = daily_rows(conn, since=args.since, project=args.project)
     conn.close()
     if not rows:
-        console.print("[yellow]Aucune donnee. Lance `cost-tracker scan` d'abord.[/yellow]")
+        console.print("[yellow]Aucune donnee. Lance `cc-spend scan` d'abord.[/yellow]")
         return 0
 
     daily_limit = args.daily
@@ -292,7 +292,7 @@ def cmd_anomalies(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="cost-tracker", description="Couts Claude Code cross-projet.")
+    p = argparse.ArgumentParser(prog="cc-spend", description="Couts Claude Code cross-projet.")
     p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     p.add_argument("--db", default=str(DEFAULT_DB), help=f"Chemin SQLite (defaut: {DEFAULT_DB})")
     sub = p.add_subparsers(dest="cmd", required=True)

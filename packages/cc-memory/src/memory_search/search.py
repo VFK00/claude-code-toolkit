@@ -117,7 +117,7 @@ def semantic_score(
             raise ValueError(
                 f"dimension d'embedding incompatible : cache={len(emb)}, "
                 f"requete={len(query_embedding)}. Le modele d'embedding a change — "
-                "reconstruis le cache avec `memory-search index`."
+                "reconstruis le cache avec `cc-memory index`."
             )
     scored = [
         Scored(entry=e, score=cosine(emb, query_embedding), reason="semantic")

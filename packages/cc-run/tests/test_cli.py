@@ -86,3 +86,19 @@ def test_cli_verbose(tmp_path, capsys):
 def test_cli_version():
     with pytest.raises(SystemExit):
         main(["--version"])
+
+
+def test_cli_prog_name_help(capsys):
+    """Defaut 4 : --help annoncait encore l'ancien nom de binaire orchestrator."""
+    with pytest.raises(SystemExit):
+        main(["--help"])
+    out = capsys.readouterr().out
+    assert "usage: cc-run" in out
+    assert "orchestrator" not in out
+
+
+def test_cli_prog_name_version(capsys):
+    with pytest.raises(SystemExit):
+        main(["--version"])
+    out = capsys.readouterr().out
+    assert out.startswith("cc-run")

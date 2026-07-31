@@ -106,7 +106,7 @@ def cmd_preset(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="orchestrator", description="Exec parallele sur N projets.")
+    p = argparse.ArgumentParser(prog="cc-run", description="Exec parallele sur N projets.")
     p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     p.add_argument(
         "--base", default=str(DEFAULT_BASE), help=f"Racine projets (defaut: {DEFAULT_BASE})"

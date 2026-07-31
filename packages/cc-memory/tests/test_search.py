@@ -105,6 +105,18 @@ def test_semantic_score_dimension_incompatible():
         semantic_score(entries, "q", [[0.1] * 768], [0.2] * 1024)
 
 
+def test_semantic_score_dimension_incompatible_message_uses_new_name():
+    """Defaut 4 : le message renvoyait vers `memory-search index`, binaire renomme cc-memory."""
+    entries = [_entry(body="a")]
+    try:
+        semantic_score(entries, "q", [[0.1] * 768], [0.2] * 1024)
+    except ValueError as exc:
+        assert "cc-memory index" in str(exc)
+        assert "memory-search" not in str(exc)
+    else:
+        pytest.fail("ValueError attendue")
+
+
 def test_embed_ollama_liste_embeddings_vide(monkeypatch):
     """`{"embeddings": []}` doit lever RuntimeError, pas IndexError."""
 

@@ -97,7 +97,10 @@ def test_cli_query_nf525(tmp_path, capsys):
 def test_cli_query_empty_index(tmp_path, capsys):
     rc = main(["--db", str(tmp_path / "fresh.sqlite"), "--no-embed", "query", "x"])
     assert rc == 0
-    assert "Index vide" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "Index vide" in out
+    assert "cc-memory index" in out
+    assert "memory-search" not in out
 
 
 def test_cli_query_filter_project(tmp_path, capsys):
@@ -139,6 +142,22 @@ def test_cli_stats(tmp_path, capsys):
 def test_cli_version():
     with pytest.raises(SystemExit):
         main(["--version"])
+
+
+def test_cli_prog_name_help(capsys):
+    """Defaut 4 : --help annoncait encore l'ancien nom de binaire memory-search."""
+    with pytest.raises(SystemExit):
+        main(["--help"])
+    out = capsys.readouterr().out
+    assert "usage: cc-memory" in out
+    assert "memory-search" not in out
+
+
+def test_cli_prog_name_version(capsys):
+    with pytest.raises(SystemExit):
+        main(["--version"])
+    out = capsys.readouterr().out
+    assert out.startswith("cc-memory")
 
 
 def test_cli_stale_none(tmp_path, capsys):
