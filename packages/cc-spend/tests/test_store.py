@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from cost_tracker.parser import parse_transcript
+from cost_tracker.parser import UsageEntry, parse_transcript
 from cost_tracker.store import (
     connect,
     insert_entries,
@@ -12,6 +12,7 @@ from cost_tracker.store import (
     report_rows,
     since_to_timestamp,
     transcript_needs_rescan,
+    unpriced_models,
 )
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sample.jsonl"
@@ -232,3 +233,51 @@ def test_detect_anomalies_low_cache_ratio(tmp_path):
     assert len(alerts) == 1
     reasons = alerts[0]["reasons"]
     assert any("cache ratio" in r for r in reasons)
+
+
+def test_unpriced_models_signale_ce_qui_echappe_au_tarif(tmp_path: Path) -> None:
+    """Un modele absent de la table produit un cout nul.
+
+    Sans signalement, un rapport sous-estime le total sans le dire — un
+    resultat faux presente comme valide. Le volume concerne doit remonter.
+    """
+    conn = connect(tmp_path / "u.db")
+    ts = datetime.now(UTC)
+    insert_entries(
+        conn,
+        [
+            UsageEntry(
+                session_id="s1", project="p", model="claude-opus-4-5",
+                timestamp=ts, input_tokens=1000, output_tokens=100,
+                cache_creation_5m=0, cache_creation_1h=0, cache_read=0,
+                transcript_path="/tmp/a.jsonl",
+            ),
+            UsageEntry(
+                session_id="s2", project="p", model="claude-opus-9-9",
+                timestamp=ts, input_tokens=999_999, output_tokens=50_000,
+                cache_creation_5m=0, cache_creation_1h=0, cache_read=0,
+                transcript_path="/tmp/b.jsonl",
+            ),
+        ],
+    )
+    unpriced = unpriced_models(conn)
+    assert [m for m, _, _ in unpriced] == ["claude-opus-9-9"]
+    model, tokens, entries = unpriced[0]
+    assert tokens == 999_999 + 50_000
+    assert entries == 1
+
+
+def test_unpriced_models_vide_quand_tout_est_tarife(tmp_path: Path) -> None:
+    conn = connect(tmp_path / "v.db")
+    insert_entries(
+        conn,
+        [
+            UsageEntry(
+                session_id="s1", project="p", model="claude-sonnet-4-5",
+                timestamp=datetime.now(UTC), input_tokens=10, output_tokens=1,
+                cache_creation_5m=0, cache_creation_1h=0, cache_read=0,
+                transcript_path="/tmp/a.jsonl",
+            )
+        ],
+    )
+    assert unpriced_models(conn) == []

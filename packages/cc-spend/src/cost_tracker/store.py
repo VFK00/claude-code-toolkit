@@ -144,6 +144,33 @@ def since_to_timestamp(since: str) -> str:
     return (datetime.now(UTC) - delta).isoformat()
 
 
+def unpriced_models(
+    conn: sqlite3.Connection, since: str = "", project: str | None = None
+) -> list[tuple[str, int, int]]:
+    """Modeles presents dont le tarif est inconnu : `(modele, tokens, entrees)`.
+
+    Un modele absent de la table produit un cout nul. Sans ce recensement, le
+    total sous-estime la depense sans le dire — un resultat faux presente comme
+    valide. Tout modele publie apres la derniere mise a jour des tarifs tombe
+    dans ce cas.
+    """
+    where = ["ts >= ?"]
+    params: list[str] = [since_to_timestamp(since)]
+    if project:
+        where.append("project = ?")
+        params.append(project)
+    sql = (
+        "SELECT model, SUM(input_tokens + output_tokens + cache_read), COUNT(*)"
+        " FROM usage WHERE " + " AND ".join(where) + " GROUP BY model"
+    )
+    out: list[tuple[str, int, int]] = []
+    for model, tokens, entries in conn.execute(sql, params):
+        if resolve(model) is None:
+            out.append((model, int(tokens or 0), int(entries)))
+    out.sort(key=lambda r: r[1], reverse=True)
+    return out
+
+
 def report_rows(
     conn: sqlite3.Connection,
     group_by: str,

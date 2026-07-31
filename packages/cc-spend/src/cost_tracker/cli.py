@@ -25,6 +25,7 @@ from .store import (
     purge_transcript,
     report_rows,
     transcript_needs_rescan,
+    unpriced_models,
 )
 
 DEFAULT_PROJECTS = transcripts_dir()
@@ -76,6 +77,25 @@ def cmd_scan(args: argparse.Namespace) -> int:
     return 0
 
 
+def print_unpriced(unpriced: list[tuple[str, int, int]]) -> None:
+    """Restitue les modeles dont le tarif est inconnu.
+
+    Leur cout compte pour zero dans le total. Le taire donnerait une depense
+    sous-estimee sans que rien ne le signale.
+    """
+    if not unpriced:
+        return
+    total_tokens = sum(t for _, t, _ in unpriced)
+    console.print(
+        f"[yellow]Not priced: {len(unpriced)} model(s), "
+        f"{total_tokens:,} tokens counted as $0.00[/yellow]"
+    )
+    for model, tokens, entries in unpriced:
+        plural = "entry" if entries == 1 else "entries"
+        console.print(f"  - {model} — {tokens:,} tokens over {entries} {plural}")
+    console.print("  [dim]Add them to pricing.py to include them in the total.[/dim]")
+
+
 def cmd_report(args: argparse.Namespace) -> int:
     conn = connect(Path(args.db))
     rows = report_rows(
@@ -85,6 +105,7 @@ def cmd_report(args: argparse.Namespace) -> int:
         project=args.project,
         top=args.top,
     )
+    unpriced = unpriced_models(conn, since=args.since, project=args.project)
     conn.close()
     if not rows:
         console.print("[yellow]No data. Run `cc-spend scan` first.[/yellow]")
@@ -113,6 +134,7 @@ def cmd_report(args: argparse.Namespace) -> int:
     table.add_section()
     table.add_row("TOTAL", "", "", "", f"[bold]${total:.2f}[/bold]")
     console.print(table)
+    print_unpriced(unpriced)
     return 0
 
 
