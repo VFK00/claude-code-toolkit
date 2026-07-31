@@ -163,6 +163,46 @@ def test_analyze_no_doc_no_drift(tmp_path):
     assert result.has_drift is False
 
 
+def test_route_rx_sqlalchemy_no_false_positive(tmp_path):
+    """TODO-006 : l'alternative tRPC `.query(`/`.mutation(`/`.subscription(` n'etait
+    ancree a rien et matchait aussi `session.query()` SQLAlchemy. Tout projet
+    Python utilisant SQLAlchemy recevait un faux drift (routes 0 doc / N code)."""
+    (tmp_path / "app").mkdir()
+    (tmp_path / "app" / "repository.py").write_text(
+        """
+from sqlalchemy.orm import Session
+
+
+def get_active_users(session: Session):
+    return session.query(User).filter_by(active=True).all()
+
+
+def get_orders(session: Session):
+    return session.query(Order).all()
+
+
+def count_orders(session: Session):
+    return session.query(Order).count()
+"""
+    )
+    sig = extract_code_signals(tmp_path)
+    assert sig.routes == 0
+
+
+def test_route_rx_trpc_public_procedure_detectee(tmp_path):
+    """Le vrai cas tRPC (fichier .ts) doit continuer a etre detecte."""
+    (tmp_path / "server").mkdir()
+    (tmp_path / "server" / "router.ts").write_text(
+        """
+export const appRouter = router({
+  list: publicProcedure.query(({ ctx }) => ctx.db.user.findMany()),
+});
+"""
+    )
+    sig = extract_code_signals(tmp_path)
+    assert sig.routes == 1
+
+
 def test_route_rx_trpc(tmp_path):
     (tmp_path / "routers").mkdir()
     (tmp_path / "routers" / "user.ts").write_text(

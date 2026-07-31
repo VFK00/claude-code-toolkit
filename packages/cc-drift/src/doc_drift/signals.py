@@ -13,16 +13,25 @@ from pathlib import Path
 # --- Regex code ---
 # Couvre :
 #   - FastAPI/Flask/Express : @router.get, @app.post, router.get(, app.post(
-#   - tRPC (v10+) : .query(, .mutation(, .subscription(
 #   - Next.js App Router handlers : export const GET|POST|PUT|DELETE|PATCH
 #   - Hono/Koa : app.get(, router.post(
 ROUTE_RX = re.compile(
     r"@(?:router|app)\.(?:get|post|put|delete|patch|options|head|route|api_route)\b"
     r"|(?:router|app|t)\.(?:get|post|put|delete|patch)\s*\("
-    r"|\.(?:query|mutation|subscription)\s*\("
     r"|^export\s+(?:async\s+)?(?:const|function)\s+(?:GET|POST|PUT|DELETE|PATCH|OPTIONS|HEAD)\b",
     re.MULTILINE,
 )
+
+# tRPC (v10+) : .query(, .mutation(, .subscription( — non ancre a un identifiant
+# de routeur precis (`publicProcedure`, `t.procedure`, etc varient trop d'un
+# projet a l'autre). Sans discriminant supplementaire, cette alternative
+# matche aussi `session.query()` (SQLAlchemy) ou tout `.query(`/`.mutation(`
+# metier ecrit en Python. tRPC n'existe qu'en TypeScript/JavaScript : on limite
+# donc cette regex aux fichiers de ces extensions (TRPC_EXTENSIONS plus bas),
+# jamais aux fichiers Python.
+TRPC_ROUTE_RX = re.compile(r"\.(?:query|mutation|subscription)\s*\(")
+
+TRPC_EXTENSIONS = {".ts", ".tsx", ".js", ".jsx"}
 MODEL_RX = re.compile(
     r"^model\s+\w+\s*\{|class\s+\w+\s*\(.*(Model|Base|Entity|Schema|Table)|@Entity",
     re.MULTILINE,
@@ -140,6 +149,8 @@ def extract_code_signals(root: Path) -> CodeSignals:
         except OSError:
             continue
         sig.routes += len(ROUTE_RX.findall(text))
+        if path.suffix in TRPC_EXTENSIONS:
+            sig.routes += len(TRPC_ROUTE_RX.findall(text))
         # MODEL_RX contient deja `^model \w+ {` : l'appliquer AUSSI a un .prisma
         # comptait chaque modele deux fois et fabriquait du drift sur tout projet
         # Prisma. Un schema = une seule regex, la plus permissive des deux.
