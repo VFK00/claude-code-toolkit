@@ -100,22 +100,27 @@ projets :
 - une pile LLM locale documentée comme vivante, **morte depuis 28 jours**
 - **6 fichiers mémoire** décrivant 8 binaires supprimés, toujours injectés au
   rappel
-- un détecteur d'écart signalant **22 modèles là où il y en avait 11** — celui-là
-  se trouvait dans une version antérieure de `cc-drift` lui-même
+- une commande documentée comme fonctionnelle, déléguant à un binaire
+  **supprimé depuis des semaines**
 
 Chacun coûte du contexte et produit de mauvaises réponses, à chaque session,
 jusqu'à ce que quelqu'un le trouve à la main.
 
-Ce dernier point explique les deux règles qui gouvernent ici toute ingestion :
+Deux règles gouvernent ici toute ingestion :
 
 - **Ne jamais échouer sur une entrée fautive.** Une ligne malformée coûte cette
   ligne, jamais le fichier, jamais l'exécution.
 - **Ne jamais écarter en silence.** Ce qui est sauté est signalé avec son motif.
 
-Elles n'ont pas été écrites d'avance. Elles viennent d'un test de charge sur un
-corpus réel, où `cc-spend` s'est révélé ignorer **53 % des transcripts** — les
-exécutions de sous-agents vivent plus profond dans l'arborescence que le
-scanner ne regardait — tout en affichant `OK` et en sortant en `0`.
+Elles ne sont pas théoriques : chaque chemin d'ingestion est éprouvé sur un
+corpus réel de plusieurs centaines de transcripts, entrées malformées
+comprises. Les transcripts sont écrits par d'autres programmes, à travers des
+versions de schéma successives, et peuvent être tronqués — un outil qui les lit
+doit le supposer.
+
+C'est ce qui distingue ces outils : un scan partiel ne ressemble jamais à un
+scan complet. Ce qui est écarté est compté, motivé et localisé ; un modèle sans
+tarif connu est signalé avec son volume plutôt que compté zéro en silence.
 
 ## Projet voisin
 
