@@ -25,9 +25,16 @@ cc-spend daily --since 30d                    # daily trend with ASCII bars
 cc-spend anomalies --since 30d                # sessions with abnormal cost/cache/output
 cc-spend budget --daily 500 --monthly 10000   # threshold alerts (exit 2 if over)
 cc-spend export --format csv -o costs.csv
+cc-spend --db /tmp/other.db scan               # --db is a main-command option
 ```
 
+`--db` belongs to the main command, so it goes **before** the subcommand.
+`cc-spend scan --db …` fails with `unrecognized arguments`.
+
 `budget` returns exit code `2` on threshold breach, `0` otherwise.
+
+Malformed entries are never dropped silently: a scan reports how many it
+discarded and why, with an example line for each reason.
 
 ## Part of
 

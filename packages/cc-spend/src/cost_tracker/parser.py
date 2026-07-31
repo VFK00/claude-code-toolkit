@@ -83,10 +83,15 @@ def parse_line_checked(
     if not isinstance(model, str):
         return None, "`model` field is not text"
 
+    # A ce stade la ligne porte un `usage` non vide : elle DEVAIT compter. Si
+    # elle n'est pas rattachable, c'est un motif de rejet, pas un hors-sujet —
+    # sans quoi une evolution de schema ferait disparaitre des couts en silence.
     ts = rec.get("timestamp")
     session_id = rec.get("sessionId") or ""
-    if not ts or not session_id:
-        return None, None
+    if not ts:
+        return None, "missing timestamp"
+    if not session_id:
+        return None, "missing sessionId"
     if not isinstance(ts, str):
         return None, "`timestamp` field is not text"
     if not isinstance(session_id, str):

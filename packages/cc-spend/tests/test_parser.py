@@ -164,9 +164,18 @@ def test_parse_line_checked_usage_vide_sans_motif():
     assert parse_line_checked(line, "proj", "/tmp/t.jsonl") == (None, None)
 
 
-def test_parse_line_checked_sans_timestamp_sans_motif():
+def test_parse_line_checked_sans_timestamp_est_signale():
+    """Cette ligne porte un `usage` reel : elle represente un cout.
+
+    Le comportement d'origine la rejetait sans motif, donc sans un mot a
+    l'utilisateur. C'est la logique qui avait fait passer sous silence la
+    moitie des transcripts : un scan partiel ne doit jamais ressembler a un
+    scan complet.
+    """
     line = '{"type":"assistant","message":{"model":"m","usage":{"input_tokens":1}}}'
-    assert parse_line_checked(line, "proj", "/tmp/t.jsonl") == (None, None)
+    entry, reason = parse_line_checked(line, "proj", "/tmp/t.jsonl")
+    assert entry is None
+    assert reason == "missing timestamp"
 
 
 def test_parse_line_checked_session_non_textuelle():
@@ -264,3 +273,33 @@ def test_iter_transcripts_projet_illisible_signale(tmp_path):
         proj.chmod(0o755)
     assert results == []
     assert report.files == 1
+
+
+def test_usage_sans_session_id_est_signale() -> None:
+    """Une ligne porteuse d'un `usage` devait compter : si elle n'est pas
+    rattachable, elle est signalee, jamais avalee en silence."""
+    line = (
+        '{"type":"assistant","timestamp":"2026-07-31T10:00:00Z",'
+        '"message":{"model":"m","usage":{"input_tokens":1,"output_tokens":1}}}'
+    )
+    entry, reason = parse_line_checked(line, "proj", "/tmp/t.jsonl")
+    assert entry is None
+    assert reason == "missing sessionId"
+
+
+def test_usage_sans_timestamp_est_signale() -> None:
+    line = (
+        '{"type":"assistant","sessionId":"s1",'
+        '"message":{"model":"m","usage":{"input_tokens":1,"output_tokens":1}}}'
+    )
+    entry, reason = parse_line_checked(line, "proj", "/tmp/t.jsonl")
+    assert entry is None
+    assert reason == "missing timestamp"
+
+
+def test_ligne_sans_usage_reste_hors_sujet() -> None:
+    """Sans `usage`, la ligne n'avait pas vocation a compter : rien a signaler."""
+    line = '{"type":"assistant","message":{"model":"m"}}'
+    entry, reason = parse_line_checked(line, "proj", "/tmp/t.jsonl")
+    assert entry is None
+    assert reason is None
