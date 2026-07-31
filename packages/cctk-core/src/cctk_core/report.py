@@ -54,12 +54,12 @@ class SkipReport:
             return []
         counts = []
         if self.entries:
-            counts.append(f"{self.entries} entree{'s' if self.entries > 1 else ''}")
+            counts.append(f"{self.entries} entr{'ies' if self.entries > 1 else 'y'}")
         if self.files:
-            counts.append(f"{self.files} fichier{'s' if self.files > 1 else ''}")
-        out = [f"Ecarte : {' et '.join(counts)}"]
+            counts.append(f"{self.files} file{'s' if self.files > 1 else ''}")
+        out = [f"Discarded: {' and '.join(counts)}"]
         out += [
             f"  - {reason} x{n}" for reason, n in self.reasons.most_common()
         ]
-        out += [f"  ex. {sample}" for sample in self.samples]
+        out += [f"  e.g. {sample}" for sample in self.samples]
         return out

@@ -32,8 +32,8 @@ def test_lines_detaille_motifs_et_exemples():
     r.skip_entry("timestamp illisible", "/a.jsonl:4")
     r.skip_file("lecture impossible", "/c.jsonl")
     text = "\n".join(r.lines())
-    assert "1 entree" in text
-    assert "1 fichier" in text
+    assert "1 entry" in text
+    assert "1 file" in text
     assert "timestamp illisible" in text
     assert "/a.jsonl:4" in text
 

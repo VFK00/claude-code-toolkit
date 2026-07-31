@@ -64,37 +64,37 @@ def parse_line_checked(
     try:
         rec = json.loads(line)
     except json.JSONDecodeError:
-        return None, "JSON invalide"
+        return None, "invalid JSON"
     if not isinstance(rec, dict):
-        return None, "ligne JSON qui n'est pas un objet"
+        return None, "JSON line is not an object"
     if rec.get("type") != "assistant":
         return None, None
 
     msg = rec.get("message") or {}
     if not isinstance(msg, dict):
-        return None, "champ `message` non-objet"
+        return None, "`message` field is not an object"
     usage = msg.get("usage") or {}
     if not isinstance(usage, dict):
-        return None, "champ `usage` non-objet"
+        return None, "`usage` field is not an object"
     if not usage:
         return None, None
 
     model = msg.get("model") or "unknown"
     if not isinstance(model, str):
-        return None, "champ `model` non textuel"
+        return None, "`model` field is not text"
 
     ts = rec.get("timestamp")
     session_id = rec.get("sessionId") or ""
     if not ts or not session_id:
         return None, None
     if not isinstance(ts, str):
-        return None, "champ `timestamp` non textuel"
+        return None, "`timestamp` field is not text"
     if not isinstance(session_id, str):
-        return None, "champ `sessionId` non textuel"
+        return None, "`sessionId` field is not text"
     try:
         timestamp = datetime.fromisoformat(ts.replace("Z", "+00:00"))
     except ValueError:
-        return None, "timestamp illisible"
+        return None, "unreadable timestamp"
 
     cache_creation = usage.get("cache_creation") or {}
     if not isinstance(cache_creation, dict):
@@ -114,7 +114,7 @@ def parse_line_checked(
             transcript_path=transcript_path,
         )
     except ValidationError:
-        return None, "compteurs de tokens non numeriques"
+        return None, "non-numeric token counters"
     return entry, None
 
 
@@ -137,7 +137,7 @@ def iter_transcripts(
         project_dirs = sorted(base.iterdir())
     except OSError as exc:
         if report is not None:
-            report.skip_file(f"repertoire illisible ({_reason(exc)})", str(base))
+            report.skip_file(f"unreadable directory ({_reason(exc)})", str(base))
         return
     for project_dir in project_dirs:
         if not project_dir.is_dir():
@@ -159,7 +159,7 @@ def _walk_jsonl(
     def on_error(exc: OSError) -> None:
         if report is not None:
             where = exc.filename or str(root)
-            report.skip_file(f"repertoire illisible ({_reason(exc)})", str(where))
+            report.skip_file(f"unreadable directory ({_reason(exc)})", str(where))
 
     # followlinks reste a False : une boucle de symlinks ne doit pas tourner.
     for dirpath, dirnames, filenames in os.walk(root, onerror=on_error):
@@ -177,7 +177,7 @@ def parse_transcript(
         handle = path.open(encoding="utf-8", errors="replace")
     except OSError as exc:
         if report is not None:
-            report.skip_file(f"lecture impossible ({_reason(exc)})", str(path))
+            report.skip_file(f"unreadable file ({_reason(exc)})", str(path))
         return
     with handle:
         line_no = 0
@@ -189,9 +189,9 @@ def parse_transcript(
                     yield entry
                 elif reason is not None and report is not None:
                     report.skip_entry(reason, f"{path}:{line_no}")
-        except OSError as exc:  # lecture interrompue en cours de fichier
+        except OSError as exc:  # read interrupted mid-file
             if report is not None:
-                report.skip_file(f"lecture interrompue ({_reason(exc)})", str(path))
+                report.skip_file(f"read interrupted ({_reason(exc)})", str(path))
 
 
 def _reason(exc: OSError) -> str:

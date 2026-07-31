@@ -44,14 +44,14 @@ def resolve_targets(args: argparse.Namespace) -> list[Path]:
                 alt = base / sub / args.project
                 if alt.is_dir():
                     return [alt]
-            console.print(f"[red]Projet introuvable : {args.project}[/red]")
+            console.print(f"[red]Project not found: {args.project}[/red]")
             return []
         return [p]
     return [Path.cwd()]
 
 
 def print_result(result: DriftResult, threshold: float) -> None:
-    header = f"{result.project.name} (seuil {threshold:.0f}%)"
+    header = f"{result.project.name} (threshold {threshold:.0f}%)"
     table = Table(title=header)
     table.add_column("Signal", style="cyan")
     table.add_column("Doc", justify="right")
@@ -81,8 +81,8 @@ def print_result(result: DriftResult, threshold: float) -> None:
         table.add_row(label, "-" if doc_v is None else str(doc_v), str(code_v), pct_s, status)
     console.print(table)
     if result.docs_found:
-        console.print(f"  Docs lus : {', '.join(result.docs_found)}")
-    console.print(f"  Fichiers source scannes : {result.code.files_scanned}")
+        console.print(f"  Docs read: {', '.join(result.docs_found)}")
+    console.print(f"  Source files scanned: {result.code.files_scanned}")
 
 
 def cmd_check(args: argparse.Namespace) -> int:
@@ -101,8 +101,8 @@ def cmd_check(args: argparse.Namespace) -> int:
 HOOK_TEMPLATE = """#!/bin/sh
 # cc-drift pre-commit hook
 cc-drift check --threshold {threshold} || {{
-    echo "cc-drift : drift doc/code detecte. Mets la doc a jour, ou relance" >&2
-    echo "avec un seuil adapte : cc-drift install-hook --threshold N." >&2
+    echo "cc-drift: doc/code drift detected. Update the docs, or rerun" >&2
+    echo "with a different threshold: cc-drift install-hook --threshold N." >&2
     exit 1
 }}
 """
@@ -112,34 +112,34 @@ def cmd_install_hook(args: argparse.Namespace) -> int:
     root = Path(args.project) if args.project else Path.cwd()
     hook_path = root / ".git" / "hooks" / "pre-commit"
     if not hook_path.parent.is_dir():
-        console.print(f"[red]Pas un repo git : {root}[/red]")
+        console.print(f"[red]Not a git repo: {root}[/red]")
         return 1
     hook_path.write_text(HOOK_TEMPLATE.format(threshold=args.threshold), encoding="utf-8")
     hook_path.chmod(0o755)
-    console.print(f"[green]OK[/green] hook installe : {hook_path}")
+    console.print(f"[green]OK[/green] hook installed: {hook_path}")
     return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="cc-drift", description="Detecteur de drift doc/code.")
+    p = argparse.ArgumentParser(prog="cc-drift", description="Documentation/code drift detector.")
     p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     p.add_argument(
-        "--base", default=str(DEFAULT_BASE), help=f"Racine projets (defaut: {DEFAULT_BASE})."
+        "--base", default=str(DEFAULT_BASE), help=f"Projects root (default: {DEFAULT_BASE})."
     )
 
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    check = sub.add_parser("check", help="Analyse drift.")
+    check = sub.add_parser("check", help="Analyze drift.")
     group = check.add_mutually_exclusive_group()
-    group.add_argument("--project", default=None, help="Nom du projet a scanner.")
-    group.add_argument("--all", action="store_true", help="Scanne tous les projets sous --base.")
+    group.add_argument("--project", default=None, help="Project name to scan.")
+    group.add_argument("--all", action="store_true", help="Scan all projects under --base.")
     check.add_argument(
-        "--threshold", type=float, default=25.0, help="Pourcentage tolere (defaut 25)."
+        "--threshold", type=float, default=25.0, help="Tolerated percentage (default 25)."
     )
     check.set_defaults(func=cmd_check)
 
-    hook = sub.add_parser("install-hook", help="Installe un pre-commit hook.")
-    hook.add_argument("--project", default=None, help="Path projet (defaut : cwd).")
+    hook = sub.add_parser("install-hook", help="Install a pre-commit hook.")
+    hook.add_argument("--project", default=None, help="Project path (default: cwd).")
     hook.add_argument("--threshold", type=float, default=25.0)
     hook.set_defaults(func=cmd_install_hook)
 

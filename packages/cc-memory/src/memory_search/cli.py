@@ -29,14 +29,14 @@ def print_skips(report: SkipReport) -> None:
 def cmd_index(args: argparse.Namespace) -> int:
     base = Path(args.base)
     if not base.exists():
-        console.print(f"[red]Repertoire introuvable : {base}[/red]")
+        console.print(f"[red]Directory not found: {base}[/red]")
         return 1
     conn = connect(Path(args.db))
     report = SkipReport()
     entries = list(iter_memory(base, report))
     if not entries:
         conn.close()
-        console.print("[yellow]Aucun fichier memory trouve.[/yellow]")
+        console.print("[yellow]No memory file found.[/yellow]")
         print_skips(report)
         return 0
     embeddings: list[list[float]] | None = None
@@ -44,9 +44,9 @@ def cmd_index(args: argparse.Namespace) -> int:
         try:
             texts = [e.searchable_text() for e in entries]
             embeddings = embed_ollama(texts, model=args.embed_model, host=args.ollama_host)
-            console.print(f"[green]OK[/green] embeddings : {len(embeddings)} docs")
+            console.print(f"[green]OK[/green] embeddings: {len(embeddings)} docs")
         except Exception as exc:
-            console.print(f"[yellow]Embeddings indispo ({exc}). Fulltext-only.[/yellow]")
+            console.print(f"[yellow]Embeddings unavailable ({exc}). Fulltext-only.[/yellow]")
             embeddings = None
     indexed = 0
     for i, entry in enumerate(entries):
@@ -59,11 +59,11 @@ def cmd_index(args: argparse.Namespace) -> int:
             conn.commit()
         except (OSError, sqlite3.Error) as exc:
             conn.rollback()
-            report.skip_file(f"indexation impossible ({exc})", entry.path)
+            report.skip_file(f"indexing failed ({exc})", entry.path)
             continue
         indexed += 1
     conn.close()
-    console.print(f"[green]OK[/green] indexe : {indexed} entrees memory")
+    console.print(f"[green]OK[/green] indexed: {indexed} memory entries")
     print_skips(report)
     return 0
 
@@ -93,7 +93,7 @@ def cmd_query(args: argparse.Namespace) -> int:
     loaded = load_all(conn, project=args.project, type_=args.type)
     conn.close()
     if not loaded:
-        console.print("[yellow]Index vide. Lance `cc-memory index`.[/yellow]")
+        console.print("[yellow]Empty index. Run `cc-memory index`.[/yellow]")
         return 0
     entries = [e for e, _ in loaded]
     embeddings = [emb for _, emb in loaded]
@@ -143,7 +143,7 @@ def cmd_grep(args: argparse.Namespace) -> int:
         console.print(f"[red]{exc}[/red]")
         return 1
     if not results:
-        console.print("[yellow]Aucun match.[/yellow]")
+        console.print("[yellow]No match.[/yellow]")
         return 0
     _print_results(results, limit=args.limit)
     return 0
@@ -154,8 +154,8 @@ def cmd_stats(args: argparse.Namespace) -> int:
     s = stats(conn)
     conn.close()
     table = Table(title="Memory stats")
-    table.add_column("Cle", style="cyan")
-    table.add_column("Valeur", justify="right")
+    table.add_column("Key", style="cyan")
+    table.add_column("Value", justify="right")
     for k, v in sorted(s.items()):
         table.add_row(k, str(v))
     console.print(table)
@@ -173,10 +173,10 @@ def cmd_stale(args: argparse.Namespace) -> int:
     conn.close()
     if not entries:
         console.print(
-            f"[green]Aucune memoire stale (seuil {args.older_than}j).[/green]"
+            f"[green]No stale memory (threshold {args.older_than}d).[/green]"
         )
         return 0
-    table = Table(title=f"Memoires stale (>= {args.older_than}j)")
+    table = Table(title=f"Stale memories (>= {args.older_than}d)")
     table.add_column("#", justify="right")
     table.add_column("Age", justify="right", style="bold yellow")
     table.add_column("Project", style="cyan")
@@ -186,7 +186,7 @@ def cmd_stale(args: argparse.Namespace) -> int:
     for i, (entry, _, age) in enumerate(entries[: args.limit], 1):
         table.add_row(
             str(i),
-            f"{age}j",
+            f"{age}d",
             entry.project,
             entry.type,
             entry.slug,
@@ -194,44 +194,44 @@ def cmd_stale(args: argparse.Namespace) -> int:
         )
     console.print(table)
     if len(entries) > args.limit:
-        reste = len(entries) - args.limit
-        console.print(f"[dim]... + {reste} autres (utilise --limit pour afficher plus)[/dim]")
+        remaining = len(entries) - args.limit
+        console.print(f"[dim]... + {remaining} more (use --limit to show more)[/dim]")
     return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="cc-memory", description="Recherche cross-projet memory.")
+    p = argparse.ArgumentParser(prog="cc-memory", description="Cross-project memory search.")
     p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     p.add_argument("--db", default=str(DEFAULT_DB))
     p.add_argument("--embed-model", default="nomic-embed-text")
     p.add_argument("--ollama-host", default=os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
-    p.add_argument("--no-embed", action="store_true", help="Desactive semantic search.")
+    p.add_argument("--no-embed", action="store_true", help="Disable semantic search.")
 
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    idx = sub.add_parser("index", help="Construit/maj l'index.")
+    idx = sub.add_parser("index", help="Build/update the index.")
     idx.add_argument("--base", default=str(DEFAULT_BASE))
     idx.set_defaults(func=cmd_index)
 
-    q = sub.add_parser("query", help="Recherche hybride (fulltext + semantic).")
+    q = sub.add_parser("query", help="Hybrid search (fulltext + semantic).")
     q.add_argument("query")
     q.add_argument("--project", default=None)
     q.add_argument("--type", default=None)
     q.add_argument("--limit", type=int, default=5)
     q.set_defaults(func=cmd_query)
 
-    g = sub.add_parser("grep", help="Recherche regex stricte.")
+    g = sub.add_parser("grep", help="Strict regex search.")
     g.add_argument("pattern")
     g.add_argument("--project", default=None)
     g.add_argument("--type", default=None)
     g.add_argument("--limit", type=int, default=20)
     g.set_defaults(func=cmd_grep)
 
-    st = sub.add_parser("stats", help="Statistiques index.")
+    st = sub.add_parser("stats", help="Index statistics.")
     st.set_defaults(func=cmd_stats)
 
-    stale = sub.add_parser("stale", help="Detecte memoires non modifiees depuis N jours.")
-    stale.add_argument("--older-than", type=int, default=90, help="Seuil en jours (defaut 90).")
+    stale = sub.add_parser("stale", help="Detect memories not modified in N days.")
+    stale.add_argument("--older-than", type=int, default=90, help="Threshold in days (default 90).")
     stale.add_argument("--project", default=None)
     stale.add_argument("--type", default=None)
     stale.add_argument("--limit", type=int, default=20)

@@ -176,7 +176,7 @@ def test_parse_line_checked_session_non_textuelle():
     )
     entry, reason = parse_line_checked(line, "proj", "/tmp/t.jsonl")
     assert entry is None
-    assert reason == "champ `sessionId` non textuel"
+    assert reason == "`sessionId` field is not text"
 
 
 def test_parse_line_cache_creation_non_dict_ne_bloque_pas():
@@ -242,7 +242,7 @@ def test_parse_transcript_lecture_interrompue_signalee(tmp_path, monkeypatch):
 
     assert list(parse_transcript(f, "alpha", report)) == []
     assert report.files == 1
-    assert "lecture interrompue" in next(iter(report.reasons))
+    assert "read interrupted" in next(iter(report.reasons))
 
 
 def test_iter_transcripts_ignore_les_fichiers_a_la_racine(tmp_path):

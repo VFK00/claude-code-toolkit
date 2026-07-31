@@ -43,7 +43,7 @@ def parse_file(
     except OSError as exc:
         if report is not None:
             reason = exc.strerror or exc.__class__.__name__
-            report.skip_file(f"lecture impossible ({reason})", str(path))
+            report.skip_file(f"unreadable file ({reason})", str(path))
         return None
     slug = path.stem
     match = FRONTMATTER_RE.match(text)
@@ -57,7 +57,7 @@ def parse_file(
         # inexploitable, le corps reste indexable.
         if not isinstance(front, dict):
             if front is not None and report is not None:
-                report.skip_entry("frontmatter YAML non-mapping", str(path))
+                report.skip_entry("YAML frontmatter is not a mapping", str(path))
             front = {}
         return MemoryEntry(
             path=str(path),
@@ -86,7 +86,7 @@ def iter_memory(base: Path, report: SkipReport | None = None) -> Iterator[Memory
         project_dirs = sorted(base.iterdir())
     except OSError as exc:
         if report is not None:
-            report.skip_file(f"repertoire illisible ({exc.strerror or exc})", str(base))
+            report.skip_file(f"unreadable directory ({exc.strerror or exc})", str(base))
         return
     for project_dir in project_dirs:
         memory = project_dir / "memory"

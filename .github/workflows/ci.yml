@@ -16,8 +16,8 @@ on:
 
 jobs:
   test:
-    # Depot public : runner GitHub-hosted obligatoire. Un runner self-heberge
-    # laisserait une PR de fork executer du code arbitraire sur l'infrastructure.
+    # Public repo: GitHub-hosted runner required. A self-hosted runner would
+    # let a fork PR execute arbitrary code on the infrastructure.
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

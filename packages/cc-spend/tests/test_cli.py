@@ -23,7 +23,7 @@ def test_cli_scan_and_report(tmp_path, capsys):
     rc = main(["--db", str(db), "scan", "--projects-dir", str(projects), "--verbose"])
     assert rc == 0
     out = capsys.readouterr().out
-    assert "scannes" in out or "scanne" in out
+    assert "scanned" in out
     rc = main(["--db", str(db), "report", "--by", "project"])
     assert rc == 0
     out = capsys.readouterr().out
@@ -64,7 +64,7 @@ def test_cli_scan_missing_dir(tmp_path, capsys):
 def test_cli_report_empty(tmp_path, capsys):
     rc = main(["--db", str(tmp_path / "empty.sqlite"), "report"])
     assert rc == 0
-    assert "Aucune" in capsys.readouterr().out
+    assert "No data" in capsys.readouterr().out
 
 
 def test_cli_force_rescan(tmp_path):
@@ -94,7 +94,7 @@ def test_cli_scan_compte_les_transcripts_de_sous_agents(tmp_path, capsys):
     rc = main(["--db", str(db), "scan", "--projects-dir", str(projects)])
 
     assert rc == 0
-    assert "scannes : 2" in capsys.readouterr().out
+    assert "scanned: 2" in capsys.readouterr().out
 
 
 def test_cli_scan_sous_agent_attribue_au_projet_reel(tmp_path, capsys):
@@ -154,7 +154,7 @@ def test_cli_scan_ligne_fautive_non_fatale(tmp_path, capsys):
 
     assert rc == 0
     out = capsys.readouterr().out
-    assert "ecarte" in out.lower()
+    assert "discarded" in out.lower()
 
 
 def test_cli_scan_signale_le_compte_exact_des_ecarts(tmp_path, capsys):
@@ -200,11 +200,11 @@ def test_cli_scan_signale_le_compte_exact_des_ecarts(tmp_path, capsys):
     assert rc == 0
     out = capsys.readouterr().out
     # Le signal se declenche, avec le compte exact — pas un mot vague.
-    assert "Ecarte : 3 entrees" in out
+    assert "Discarded: 3 entries" in out
     # Chaque motif distinct est detaille, pas noye dans un total opaque.
-    assert "JSON invalide x1" in out
-    assert "compteurs de tokens non numeriques x1" in out
-    assert "timestamp illisible x1" in out
+    assert "invalid JSON x1" in out
+    assert "non-numeric token counters x1" in out
+    assert "unreadable timestamp x1" in out
 
     conn = sqlite3.connect(db)
     inserted = conn.execute("SELECT COUNT(*) FROM usage").fetchone()[0]
@@ -288,8 +288,8 @@ def test_cli_scan_erreur_sqlite_non_fatale(tmp_path, monkeypatch, capsys):
 
     assert rc == 0
     out = capsys.readouterr().out
-    assert "scannes : 1" in out
-    assert "indexation impossible" in out
+    assert "scanned: 1" in out
+    assert "indexing failed" in out
     conn = sqlite3.connect(db)
     assert conn.execute("SELECT COUNT(*) FROM usage").fetchone()[0] == 4
     conn.close()
@@ -321,7 +321,7 @@ def test_cli_daily(tmp_path, capsys):
 def test_cli_daily_empty(tmp_path, capsys):
     rc = main(["--db", str(tmp_path / "empty.sqlite"), "daily"])
     assert rc == 0
-    assert "Aucune" in capsys.readouterr().out
+    assert "No data" in capsys.readouterr().out
 
 
 def test_cli_anomalies_none(tmp_path, capsys):
@@ -332,7 +332,7 @@ def test_cli_anomalies_none(tmp_path, capsys):
     rc = main(["--db", str(db), "anomalies", "--since", ""])
     assert rc == 0
     # Fixture : 4 entrees de cout similaire, aucune anomalie
-    assert "Aucune anomalie" in capsys.readouterr().out
+    assert "No anomaly" in capsys.readouterr().out
 
 
 def test_cli_anomalies_json(tmp_path, capsys):
@@ -388,7 +388,7 @@ def test_cli_budget_no_limits(tmp_path, capsys):
     assert rc == 0
     out = capsys.readouterr().out
     assert "$220" in out
-    assert "Moyenne/jour" in out
+    assert "Average/day" in out
 
 
 def test_cli_budget_daily_over(tmp_path, capsys):
@@ -415,13 +415,13 @@ def test_cli_budget_monthly_projection(tmp_path, capsys):
     _seed_multi_days(db, pairs)
     rc = main(["--db", str(db), "budget", "--since", "", "--monthly", "2000"])
     assert rc == 2
-    assert "Projete fin mois" in capsys.readouterr().out
+    assert "Projected month-end" in capsys.readouterr().out
 
 
 def test_cli_budget_empty(tmp_path, capsys):
     rc = main(["--db", str(tmp_path / "empty.sqlite"), "budget"])
     assert rc == 0
-    assert "Aucune" in capsys.readouterr().out
+    assert "No data" in capsys.readouterr().out
 
 
 def test_cli_prog_name_help(capsys):

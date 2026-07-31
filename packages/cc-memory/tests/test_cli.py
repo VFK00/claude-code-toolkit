@@ -27,7 +27,7 @@ def test_cli_index_empty_base(tmp_path, capsys):
     empty.mkdir()
     rc = main(["--db", str(tmp_path / "db.sqlite"), "--no-embed", "index", "--base", str(empty)])
     assert rc == 0
-    assert "Aucun" in capsys.readouterr().out
+    assert "No memory file found" in capsys.readouterr().out
 
 
 def _memory_dir(tmp_path: Path) -> Path:
@@ -52,7 +52,7 @@ def test_cli_index_fichier_casse_non_fatal(tmp_path, capsys):
 
     assert rc == 0
     out = capsys.readouterr().out
-    assert "ecarte" in out.lower()
+    assert "discarded" in out.lower()
     conn = sqlite3.connect(db)
     assert conn.execute("SELECT COUNT(*) FROM memory").fetchone()[0] == 3
     conn.close()
@@ -98,7 +98,7 @@ def test_cli_query_empty_index(tmp_path, capsys):
     rc = main(["--db", str(tmp_path / "fresh.sqlite"), "--no-embed", "query", "x"])
     assert rc == 0
     out = capsys.readouterr().out
-    assert "Index vide" in out
+    assert "Empty index" in out
     assert "cc-memory index" in out
     assert "memory-search" not in out
 
@@ -127,7 +127,7 @@ def test_cli_grep_no_match(tmp_path, capsys):
     capsys.readouterr()
     rc = main(["--db", str(db), "--no-embed", "grep", "zzzinexistant"])
     assert rc == 0
-    assert "Aucun match" in capsys.readouterr().out
+    assert "No match" in capsys.readouterr().out
 
 
 def test_cli_stats(tmp_path, capsys):
@@ -175,7 +175,7 @@ def test_cli_stale_none(tmp_path, capsys):
     capsys.readouterr()
     rc = main(["--db", str(db), "stale", "--older-than", "1"])
     assert rc == 0
-    assert "Aucune" in capsys.readouterr().out
+    assert "No stale memory" in capsys.readouterr().out
 
 
 def test_cli_stale_detected(tmp_path, capsys):
@@ -197,4 +197,4 @@ def test_cli_stale_detected(tmp_path, capsys):
     rc = main(["--db", str(db), "stale", "--older-than", "90"])
     assert rc == 0
     out = capsys.readouterr().out
-    assert "stale" in out or "Memoires" in out
+    assert "Stale memories" in out
