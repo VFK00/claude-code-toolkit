@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+import doc_drift.cli as cli_module
 from doc_drift.cli import main
 
 
@@ -125,12 +126,30 @@ def test_cli_install_hook_executable_reellement(tmp_path):
     assert "doc-drift" not in binaries
 
 
-def test_cli_fix_no_ai_doc(tmp_path, monkeypatch, capsys):
-    p = make_clean(tmp_path)
-    monkeypatch.chdir(p)
-    monkeypatch.setenv("PATH", "")  # vide PATH
-    rc = main(["fix", "--dry-run"])
-    assert rc == 1
+def test_cli_fix_subcommand_removed(capsys):
+    """Defaut 5 : `fix` deleguait a ai-doc, binaire supprime, ne peut aboutir
+    chez personne. Sous-commande retiree plutot que documentee morte."""
+    with pytest.raises(SystemExit) as exc_info:
+        main(["fix"])
+    assert exc_info.value.code != 0
+    err = capsys.readouterr().err
+    assert "invalid choice: 'fix'" in err
+
+
+def test_cli_help_omits_fix(capsys):
+    with pytest.raises(SystemExit):
+        main(["--help"])
+    out = capsys.readouterr().out
+    assert "fix" not in out
+
+
+def test_cli_no_internal_leak_in_source():
+    """Defaut 5 : cmd_fix fuitait ai-doc, ADR-014, "le poste" et /doc refresh
+    a un utilisateur public. Aucune trace ne doit subsister dans le code."""
+    assert not hasattr(cli_module, "cmd_fix")
+    source = Path(cli_module.__file__).read_text(encoding="utf-8")
+    for forbidden in ("ai-doc", "ADR-014", "le poste", "/doc refresh"):
+        assert forbidden not in source
 
 
 def test_cli_version():

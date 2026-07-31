@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import shutil
-import subprocess
 import sys
 from pathlib import Path
 
@@ -100,33 +98,6 @@ def cmd_check(args: argparse.Namespace) -> int:
     return 2 if any_drift else 0
 
 
-def cmd_fix(args: argparse.Namespace) -> int:
-    ai_doc = shutil.which("ai-doc")
-    if not ai_doc:
-        console.print(
-            "[red]ai-doc introuvable dans PATH.[/red] "
-            "La toolbox IA locale a ete demantelee le 2026-07-28 (the-docs-repo ADR-014) : "
-            "ce binaire n'existe plus sur le poste."
-        )
-        console.print(
-            "Corriger la doc via le skill Claude Code [cyan]/doc refresh[/cyan], "
-            "ou remettre un binaire nomme [cyan]ai-doc[/cyan] dans le PATH."
-        )
-        return 1
-    targets = resolve_targets(args)
-    if not targets:
-        return 1
-    for root in targets:
-        console.print(f"[cyan]Delegation a ai-doc pour {root}[/cyan]")
-        cmd = [ai_doc]
-        if args.dry_run:
-            cmd.append("--check")
-        result = subprocess.run(cmd, cwd=root)
-        if result.returncode != 0 and not args.dry_run:
-            console.print(f"[yellow]ai-doc exit code {result.returncode}[/yellow]")
-    return 0
-
-
 HOOK_TEMPLATE = """#!/bin/sh
 # cc-drift pre-commit hook
 cc-drift check --threshold {threshold} || {{
@@ -166,14 +137,6 @@ def build_parser() -> argparse.ArgumentParser:
         "--threshold", type=float, default=25.0, help="Pourcentage tolere (defaut 25)."
     )
     check.set_defaults(func=cmd_check)
-
-    fix = sub.add_parser("fix", help="Delegue corrections a ai-doc.")
-    g = fix.add_mutually_exclusive_group()
-    g.add_argument("--project", default=None)
-    g.add_argument("--all", action="store_true")
-    fix.add_argument("--threshold", type=float, default=25.0)
-    fix.add_argument("--dry-run", action="store_true")
-    fix.set_defaults(func=cmd_fix)
 
     hook = sub.add_parser("install-hook", help="Installe un pre-commit hook.")
     hook.add_argument("--project", default=None, help="Path projet (defaut : cwd).")
