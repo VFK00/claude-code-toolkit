@@ -157,6 +157,64 @@ def test_cli_scan_ligne_fautive_non_fatale(tmp_path, capsys):
     assert "ecarte" in out.lower()
 
 
+def test_cli_scan_signale_le_compte_exact_des_ecarts(tmp_path, capsys):
+    """TODO-009 : print_skips doit se declencher avec le detail exact, et
+    entrees inserees + entrees ecartees doit couvrir toutes les entrees
+    candidates presentes dans le corpus — aucune ne doit disparaitre sans
+    etre ni comptee, ni signalee."""
+    import sqlite3
+
+    projects = setup_projects(tmp_path)  # session1.jsonl (fixture) : 4 entrees valides
+    proj = next(projects.iterdir())
+    (proj / "zz_mixed.jsonl").write_text(
+        "\n".join(
+            [
+                "",  # ligne vide : hors sujet, ni entree ni ecart
+                '{"type":"user","message":{"role":"user","content":"hello"},'
+                '"timestamp":"2026-04-20T11:00:00Z","sessionId":"s0"}',  # hors sujet
+                '{"type":"assistant","message":{"model":"m","usage":'
+                '{"input_tokens":5,"output_tokens":5}},'
+                '"timestamp":"2026-04-20T11:00:01Z","sessionId":"s1"}',  # valide #1
+                '{"type":"assistant","message":{"model":"m","usage":'
+                '{"input_tokens":6,"output_tokens":6}},'
+                '"timestamp":"2026-04-20T11:00:02Z","sessionId":"s1"}',  # valide #2
+                "{not valid json at all",  # ecart : JSON invalide
+                '{"type":"assistant","message":{"model":"m","usage":'
+                '{"input_tokens":"abc"}},'
+                '"timestamp":"2026-04-20T11:00:03Z","sessionId":"s2"}',  # ecart : compteurs
+                '{"type":"assistant","message":{"model":"m","usage":{"input_tokens":7}},'
+                '"timestamp":"pas-une-date","sessionId":"s3"}',  # ecart : timestamp
+            ]
+        )
+        + "\n"
+    )
+    db = tmp_path / "db.sqlite"
+    # Verite terrain du corpus fabrique : 4 (fixture) + 2 (mixed) valides,
+    # 3 ecarts dans mixed. Total d'entrees candidates presentes : 9.
+    valid_total = 6
+    skipped_total = 3
+    candidates_present = 9
+
+    rc = main(["--db", str(db), "scan", "--projects-dir", str(projects)])
+
+    assert rc == 0
+    out = capsys.readouterr().out
+    # Le signal se declenche, avec le compte exact — pas un mot vague.
+    assert "Ecarte : 3 entrees" in out
+    # Chaque motif distinct est detaille, pas noye dans un total opaque.
+    assert "JSON invalide x1" in out
+    assert "compteurs de tokens non numeriques x1" in out
+    assert "timestamp illisible x1" in out
+
+    conn = sqlite3.connect(db)
+    inserted = conn.execute("SELECT COUNT(*) FROM usage").fetchone()[0]
+    conn.close()
+    assert inserted == valid_total
+    # La regle « ne jamais ecarter en silence » : ce qui est insere plus ce
+    # qui est signale comme ecarte doit couvrir tout ce qui etait present.
+    assert inserted + skipped_total == candidates_present
+
+
 def test_cli_scan_conserve_le_travail_deja_fait(tmp_path, capsys):
     """C2 : un fichier fautif ne doit pas annuler les fichiers deja inseres."""
     import sqlite3
