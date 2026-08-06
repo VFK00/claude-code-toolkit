@@ -110,6 +110,18 @@ If you ever need to reinstall *without* a version change, the cache has to be
 evicted by hand — `uv cache clean cctk-core && uv tool install --force --reinstall …`.
 Bumping is the supported path; this is the escape hatch.
 
+**After bumping, resync the workspace with `--reinstall-package`:**
+
+```bash
+uv sync --all-packages --all-extras --reinstall-package cctk-core
+```
+
+Editable installs pin the version in `.dist-info` at install time. A plain
+`uv sync` leaves it stale, so `importlib.metadata.version()` still reports the
+old number while the module reports the new one — and
+`test_version_installee_egale_celle_du_module` fails on a bump that is otherwise
+correct.
+
 Numbers only prove so much. To settle whether an installed CLI is stale, compare
 content:
 

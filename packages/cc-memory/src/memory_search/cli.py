@@ -12,7 +12,7 @@ from rich.console import Console
 from rich.table import Table
 
 from . import __version__
-from .index import DEFAULT_DB, connect, load_all, stale_entries, stats, upsert
+from .index import DEFAULT_DB, connect, load_all, prune, stale_entries, stats, upsert
 from .loader import iter_memory
 from .search import Scored, embed_ollama, fulltext_score, grep_entries, semantic_score
 
@@ -49,6 +49,7 @@ def cmd_index(args: argparse.Namespace) -> int:
             console.print(f"[yellow]Embeddings unavailable ({exc}). Fulltext-only.[/yellow]")
             embeddings = None
     indexed = 0
+    seen: set[str] = set()
     for i, entry in enumerate(entries):
         emb = embeddings[i] if embeddings else None
         try:
@@ -62,8 +63,16 @@ def cmd_index(args: argparse.Namespace) -> int:
             report.skip_file(f"indexing failed ({exc})", entry.path)
             continue
         indexed += 1
+        seen.add(entry.path)
+
+    # Elaguer ce qui a disparu du disque, borne au sous-arbre reindexe : sans
+    # cela l'index ne fait que grossir, et une recherche remonte des memoires
+    # supprimees.
+    removed = prune(conn, seen, base=str(base))
     conn.close()
     console.print(f"[green]OK[/green] indexed: {indexed} memory entries")
+    if removed:
+        console.print(f"[dim]{removed} entree(s) obsolete(s) retiree(s) de l'index[/dim]")
     print_skips(report)
     return 0
 

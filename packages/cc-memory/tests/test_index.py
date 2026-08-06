@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from memory_search.index import connect, load_all, stats, upsert
+from memory_search.index import connect, load_all, prune, stats, upsert
 from memory_search.loader import iter_memory
 
 
@@ -135,3 +135,55 @@ def test_stale_entries_mtime_zero_ignored(tmp_path):
     upsert(conn, entries[0], None, 0)
     results = stale_entries(conn, older_than_days=1)
     assert results == []
+
+
+# --- Elagage : l'index ne doit pas conserver ce qui a disparu ---
+
+
+def _seed(conn, path, project="p"):
+    from memory_search.loader import MemoryEntry
+    upsert(conn, MemoryEntry(path=path, project=project, slug="s"), None, 1.0)
+    conn.commit()
+
+
+def test_prune_retire_les_entrees_disparues(tmp_path):
+    """`upsert` n'ajoute que : sans elagage l'index ne fait que grossir.
+
+    Mesure du 2026-08-06 : 141 entrees pour 57 fichiers reels.
+    """
+    conn = connect(tmp_path / "db.sqlite")
+    _seed(conn, "/base/a.md")
+    _seed(conn, "/base/disparu.md")
+
+    removed = prune(conn, seen={"/base/a.md"}, base="/base")
+
+    assert removed == 1
+    assert [e.path for e, _ in load_all(conn)] == ["/base/a.md"]
+
+
+def test_prune_borne_au_sous_arbre(tmp_path):
+    """Indexer un projet ne doit pas effacer l'index des autres."""
+    conn = connect(tmp_path / "db.sqlite")
+    _seed(conn, "/projet-a/x.md")
+    _seed(conn, "/projet-b/y.md")
+
+    removed = prune(conn, seen={"/projet-a/x.md"}, base="/projet-a")
+
+    assert removed == 0
+    assert {e.path for e, _ in load_all(conn)} == {"/projet-a/x.md", "/projet-b/y.md"}
+
+
+def test_prune_sans_base_elague_tout(tmp_path):
+    conn = connect(tmp_path / "db.sqlite")
+    _seed(conn, "/x/a.md")
+    _seed(conn, "/y/b.md")
+
+    assert prune(conn, seen={"/x/a.md"}) == 1
+    assert [e.path for e, _ in load_all(conn)] == ["/x/a.md"]
+
+
+def test_prune_index_deja_propre(tmp_path):
+    conn = connect(tmp_path / "db.sqlite")
+    _seed(conn, "/base/a.md")
+
+    assert prune(conn, seen={"/base/a.md"}, base="/base") == 0

@@ -70,6 +70,32 @@ def upsert(
     )
 
 
+def prune(conn: sqlite3.Connection, seen: set[str], base: str | None = None) -> int:
+    """Supprime les entrees dont le fichier n'existe plus. Retourne le nombre efface.
+
+    `upsert` seul ne fait qu'ajouter et mettre a jour : une memoire supprimee sur
+    le disque restait indefiniment dans l'index. Mesure du 2026-08-06 apres une
+    deduplication : **141 entrees indexees pour 57 fichiers reels**, et une
+    reindexation faisait monter le total a 151 au lieu de le faire descendre.
+    Une recherche remontait donc des memoires qui n'existaient plus.
+
+    `base` restreint l'elagage au sous-arbre reindexe : sans lui, indexer un seul
+    projet effacerait l'index de tous les autres. `seen` porte les chemins vus
+    pendant l'indexation courante, pas le contenu du disque — un fichier illisible
+    et donc non indexe n'est pas efface par surprise.
+    """
+    rows = conn.execute("SELECT path FROM memory").fetchall()
+    doomed = [
+        (p,)
+        for (p,) in rows
+        if p not in seen and (base is None or p.startswith(base))
+    ]
+    if doomed:
+        conn.executemany("DELETE FROM memory WHERE path = ?", doomed)
+        conn.commit()
+    return len(doomed)
+
+
 def load_all(
     conn: sqlite3.Connection,
     project: str | None = None,
