@@ -30,7 +30,22 @@ class MemoryEntry(BaseModel):
 
 def project_from_dir(dirname: str, *, home: Path | None = None) -> str:
     """Deduit le nom du projet depuis un dossier de session Claude Code."""
-    return _project_from_dirname(dirname, home=home, workspace="Claude/projets")
+    return _project_from_dirname(dirname, home=home)
+
+
+def _read_type(front: dict[str, object]) -> str:
+    """Type de la memoire, sous `metadata.type` ou a la racine.
+
+    Claude Code ecrit le type sous `metadata:`. Ne lire que la racine classait
+    l'integralite des memoires en `unknown` et rendait le filtre `--type` sans
+    effet, sans que rien ne le signale.
+    """
+    meta = front.get("metadata")
+    if isinstance(meta, dict):
+        value = meta.get("type")
+        if value:
+            return str(value)
+    return str(front.get("type") or "unknown")
 
 
 def parse_file(
@@ -65,7 +80,7 @@ def parse_file(
             slug=slug,
             name=str(front.get("name", "")),
             description=str(front.get("description", "")),
-            type=str(front.get("type", "unknown")),
+            type=_read_type(front),
             body=body.strip(),
             raw=text,
         )

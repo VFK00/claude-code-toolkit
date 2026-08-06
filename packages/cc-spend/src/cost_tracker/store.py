@@ -83,7 +83,9 @@ def mark_transcript(conn: sqlite3.Connection, path: Path) -> None:
 def insert_entries(conn: sqlite3.Connection, entries: Iterable[UsageEntry]) -> int:
     rows = []
     for e in entries:
-        pricing = resolve(e.model)
+        # La date de l'entree, pas l'instant du scan : un tarif qui bascule ne
+        # doit pas reecrire le cout des mois deja ecoules.
+        pricing = resolve(e.model, e.timestamp)
         cost = (
             pricing.cost(
                 e.input_tokens,

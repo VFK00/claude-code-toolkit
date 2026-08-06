@@ -97,23 +97,54 @@ def detect_project(path: Path) -> ProjectStack:
     )
 
 
+def _usable(path: Path) -> bool:
+    """Ecarte le bruit : caches, dossiers caches, dossiers de service `_*`."""
+    return (
+        path.is_dir()
+        and path.name not in EXCLUDE_DIRS
+        and not path.name.startswith((".", "_"))
+    )
+
+
+def _children(path: Path) -> list[Path]:
+    """Sous-dossiers exploitables. Un dossier illisible vaut zero enfant."""
+    try:
+        return sorted(c for c in path.iterdir() if _usable(c))
+    except OSError:
+        return []
+
+
+def _looks_like_project(path: Path) -> bool:
+    """Marqueur de stack a la racine ou dans un sous-dossier standard, ou depot git."""
+    return (path / ".git").exists() or detect_project(path).kind != "unknown"
+
+
 def scan_projects(base: Path, recurse_into: set[str] | None = None) -> list[ProjectStack]:
     """Scanne `base` pour trouver les projets.
 
-    `recurse_into` descend d'un niveau (ex: `clients`).
+    Un dossier qui ne porte aucun marqueur de projet, mais dont les enfants en
+    portent, est une **categorie** : on descend d'un niveau plutot que de le
+    compter pour un projet. Cette liste etait figee a `{clients, outils}`, ce
+    qui laissait invisible tout regroupement portant un autre nom — `produits/`
+    remontait comme une ligne unique et ses projets n'existaient pas pour
+    `cc-run run`.
+
+    `recurse_into` force la descente pour des noms donnes.
     """
-    if recurse_into is None:
-        recurse_into = {"clients", "outils"}
     results: list[ProjectStack] = []
     if not base.is_dir():
         return results
+
     for entry in sorted(base.iterdir()):
-        if not entry.is_dir() or entry.name in EXCLUDE_DIRS or entry.name.startswith("."):
+        if not _usable(entry):
             continue
-        if entry.name in recurse_into:
-            for sub in sorted(entry.iterdir()):
-                if sub.is_dir() and sub.name not in EXCLUDE_DIRS and not sub.name.startswith("."):
-                    results.append(detect_project(sub))
+        children = _children(entry)
+        forced = recurse_into is not None and entry.name in recurse_into
+        is_category = not _looks_like_project(entry) and any(
+            _looks_like_project(c) for c in children
+        )
+        if forced or is_category:
+            results.extend(detect_project(c) for c in children)
             continue
         results.append(detect_project(entry))
     return results

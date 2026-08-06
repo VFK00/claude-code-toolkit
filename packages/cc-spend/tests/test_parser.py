@@ -12,6 +12,13 @@ from cost_tracker.parser import (
     project_from_dirname,
 )
 
+
+@pytest.fixture(autouse=True)
+def _workspace_declare(monkeypatch):
+    """Les fixtures de ce module simulent un poste groupant ses projets sous
+    `Claude/projets`. Le workspace se declare, il ne se devine plus."""
+    monkeypatch.setenv("CCTK_WORKSPACE", "Claude/projets")
+
 FIXTURE = Path(__file__).parent / "fixtures" / "sample.jsonl"
 
 

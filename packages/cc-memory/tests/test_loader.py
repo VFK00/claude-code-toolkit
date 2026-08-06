@@ -6,6 +6,14 @@ from cctk_core import SkipReport
 
 from memory_search.loader import iter_memory, parse_file, project_from_dir
 
+
+@pytest.fixture(autouse=True)
+def _workspace_declare(monkeypatch):
+    """Les fixtures de ce module simulent un poste groupant ses projets sous
+    `Claude/projets`. Le workspace se declare, il ne se devine plus."""
+    monkeypatch.setenv("CCTK_WORKSPACE", "Claude/projets")
+
+
 FIXTURES = Path(__file__).parent / "fixtures" / "sample_projects"
 
 
@@ -138,3 +146,35 @@ def test_searchable_text_concat(tmp_path):
     assert "A" in e.searchable_text()
     assert "B" in e.searchable_text()
     assert "C" in e.searchable_text()
+
+
+# --- Type sous `metadata:` (format reel de Claude Code) ---
+
+
+def test_type_lu_sous_metadata(tmp_path):
+    """Claude Code ecrit le type sous `metadata:`, pas a la racine."""
+    p = tmp_path / "m.md"
+    p.write_text(
+        "---\nname: n\nmetadata:\n  node_type: memory\n  type: feedback\n---\ncorps\n",
+        encoding="utf-8",
+    )
+    entry = parse_file(p, "proj")
+    assert entry is not None
+    assert entry.type == "feedback"
+
+
+def test_type_a_la_racine_reste_accepte(tmp_path):
+    """Ancien format : ne pas casser ce qui etait deja indexe."""
+    p = tmp_path / "m.md"
+    p.write_text("---\nname: n\ntype: project\n---\ncorps\n", encoding="utf-8")
+    entry = parse_file(p, "proj")
+    assert entry is not None
+    assert entry.type == "project"
+
+
+def test_type_absent_vaut_unknown(tmp_path):
+    p = tmp_path / "m.md"
+    p.write_text("---\nname: n\nmetadata:\n  node_type: memory\n---\ncorps\n", encoding="utf-8")
+    entry = parse_file(p, "proj")
+    assert entry is not None
+    assert entry.type == "unknown"

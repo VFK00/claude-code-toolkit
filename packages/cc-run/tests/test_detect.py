@@ -66,6 +66,58 @@ def test_scan_missing_base(tmp_path):
     assert scan_projects(tmp_path / "nope") == []
 
 
+# --- Categories detectees, plus enumerees ---
+
+
+def test_scan_descend_dans_une_categorie_non_listee(tmp_path):
+    """`produits/` n'etait dans aucune liste : ses 4 projets etaient invisibles.
+
+    Un dossier sans marqueur de stack dont les enfants en portent est une
+    categorie, quel que soit son nom.
+    """
+    (tmp_path / "produits").mkdir()
+    make_project(tmp_path / "produits", "billing-api", ["pyproject.toml"])
+    make_project(tmp_path / "produits", "shop-front", ["package.json"])
+
+    names = {p.name for p in scan_projects(tmp_path)}
+    assert names == {"billing-api", "shop-front"}
+    assert "produits" not in names
+
+
+def test_scan_garde_un_projet_a_sous_dossier_entier(tmp_path):
+    """Un projet dont la stack est dans `app/` reste un projet, pas une categorie.
+
+    Sinon on remonterait `app` et `admin` en perdant le nom du client.
+    """
+    client = tmp_path / "acme-corp"
+    client.mkdir()
+    make_project(client, "app", ["package.json"])
+    (client / "admin").mkdir()
+
+    projects = scan_projects(tmp_path)
+    assert [p.name for p in projects] == ["acme-corp"]
+    assert projects[0].subdir == "app"
+
+
+def test_scan_ignore_les_dossiers_de_service(tmp_path):
+    """`_archives` et `_migration` ne sont pas des projets."""
+    make_project(tmp_path, "alpha", ["pyproject.toml"])
+    make_project(tmp_path, "_archives", ["pyproject.toml"])
+    make_project(tmp_path, "_migration", ["pyproject.toml"])
+
+    assert {p.name for p in scan_projects(tmp_path)} == {"alpha"}
+
+
+def test_scan_categorie_sans_enfant_projet_reste_un_projet(tmp_path):
+    """Un dossier de documents ne doit pas se dissoudre en ses sous-dossiers."""
+    docs = tmp_path / "documents"
+    docs.mkdir()
+    (docs / "factures").mkdir()
+    (docs / "contrats").mkdir()
+
+    assert [p.name for p in scan_projects(tmp_path)] == ["documents"]
+
+
 def test_filter_by_name(tmp_path):
     make_project(tmp_path, "a", ["pyproject.toml", "uv.lock"])
     make_project(tmp_path, "b", ["package.json"])

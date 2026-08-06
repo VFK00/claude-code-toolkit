@@ -1,8 +1,18 @@
 import os
 from pathlib import Path
 
+import pytest
+
 from memory_search.index import connect, load_all, stats, upsert
 from memory_search.loader import iter_memory
+
+
+@pytest.fixture(autouse=True)
+def _workspace_declare(monkeypatch):
+    """Les fixtures de ce module simulent un poste groupant ses projets sous
+    `Claude/projets`. Le workspace se declare, il ne se devine plus."""
+    monkeypatch.setenv("CCTK_WORKSPACE", "Claude/projets")
+
 
 FIXTURES = Path(__file__).parent / "fixtures" / "sample_projects"
 

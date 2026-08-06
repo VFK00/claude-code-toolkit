@@ -40,7 +40,7 @@ class UsageEntry(BaseModel):
 
 def project_from_dirname(dirname: str, *, home: Path | None = None) -> str:
     """Deduit le nom du projet depuis un dossier de session Claude Code."""
-    return _project_from_dirname(dirname, home=home, workspace="Claude/projets")
+    return _project_from_dirname(dirname, home=home)
 
 
 def parse_line(line: str, project: str, transcript_path: str) -> UsageEntry | None:

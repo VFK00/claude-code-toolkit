@@ -1,6 +1,12 @@
 from pathlib import Path
 
-from cctk_core.paths import project_from_dirname, transcripts_dir, workspace_root
+from cctk_core.paths import (
+    WORKSPACE_ENV,
+    project_from_dirname,
+    transcripts_dir,
+    workspace_root,
+    workspace_setting,
+)
 
 HOME = Path("/home/alice")
 
@@ -67,3 +73,42 @@ def test_transcripts_dir() -> None:
 
 def test_workspace_root() -> None:
     assert workspace_root(HOME, "Claude/projets") == Path("/home/alice/Claude/projets")
+
+
+# --- Workspace declare par l'environnement ---
+
+
+def test_workspace_root_sans_declaration_vaut_le_home(monkeypatch) -> None:
+    """Aucun nom de dossier n'est devine.
+
+    L'ancien defaut `Claude/projets` a survecu au deplacement du workspace :
+    `cc-run list` a renvoye zero projet sur une vingtaine, en sortant `0`.
+    Un scan trop large se voit ; une racine inexistante ne se voit pas.
+    """
+    monkeypatch.delenv(WORKSPACE_ENV, raising=False)
+    assert workspace_root(HOME) == HOME
+
+
+def test_workspace_root_lit_l_environnement(monkeypatch) -> None:
+    monkeypatch.setenv(WORKSPACE_ENV, "Projets")
+    assert workspace_root(HOME) == Path("/home/alice/Projets")
+
+
+def test_argument_explicite_prime_sur_l_environnement(monkeypatch) -> None:
+    monkeypatch.setenv(WORKSPACE_ENV, "Projets")
+    assert workspace_root(HOME, "autre") == Path("/home/alice/autre")
+
+
+def test_project_from_dirname_lit_l_environnement(monkeypatch) -> None:
+    monkeypatch.setenv(WORKSPACE_ENV, "Projets")
+    assert project_from_dirname("-home-alice-Projets-outils-delta", home=HOME) == "outils-delta"
+
+
+def test_workspace_setting_nettoie_les_bords(monkeypatch) -> None:
+    monkeypatch.setenv(WORKSPACE_ENV, "  /Projets/  ")
+    assert workspace_setting() == "Projets"
+
+
+def test_workspace_setting_vide_si_non_declare(monkeypatch) -> None:
+    monkeypatch.delenv(WORKSPACE_ENV, raising=False)
+    assert workspace_setting() == ""
