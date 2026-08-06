@@ -81,7 +81,6 @@ wheels = [
 
 [[package]]
 name = "cc-drift"
-version = "0.1.0"
 source = { editable = "packages/cc-drift" }
 dependencies = [
     { name = "cctk-core" },
@@ -111,7 +110,6 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "cc-memory"
-version = "0.1.0"
 source = { editable = "packages/cc-memory" }
 dependencies = [
     { name = "cctk-core" },
@@ -147,7 +145,6 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "cc-run"
-version = "0.1.0"
 source = { editable = "packages/cc-run" }
 dependencies = [
     { name = "cctk-core" },
@@ -179,7 +176,6 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "cc-spend"
-version = "0.1.0"
 source = { editable = "packages/cc-spend" }
 dependencies = [
     { name = "cctk-core" },
@@ -209,7 +205,6 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "cctk-core"
-version = "0.1.0"
 source = { editable = "packages/cctk-core" }
 
 [package.optional-dependencies]

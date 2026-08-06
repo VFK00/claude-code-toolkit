@@ -1,9 +1,9 @@
 [project]
 name = "cc-run"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Run a command across many projects in parallel"
 requires-python = ">=3.12"
-dependencies = ["pydantic>=2.9", "rich>=13.7", "cctk-core"]
+dependencies = ["pydantic>=2.9", "rich>=13.7", "cctk-core>=0.2.0"]
 
 [project.optional-dependencies]
 dev = [
@@ -19,6 +19,9 @@ cc-run = "orchestrator.cli:main"
 
 [tool.uv.sources]
 cctk-core = { workspace = true }
+
+[tool.hatch.version]
+path = "src/orchestrator/__init__.py"
 
 [build-system]
 requires = ["hatchling"]

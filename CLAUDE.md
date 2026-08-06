@@ -81,16 +81,42 @@ versions, and may be truncated. Two rules apply to every ingestion path:
   (`cctk-core`) with its reason, and is printed at the end of the command.
   A tool that quietly drops half its input and exits `0` reports a false result.
 
-## Reinstalling after a `cctk-core` change
+## Versioning — bump the socle when you change it
 
-`uv` caches built wheels by version. `cctk-core` never changes version, so
-`uv tool install --force` happily reinstalls the tools **against the previously
-built socle** — the source is right, the binary is stale, and nothing warns you.
-Symptom: a fix verified by `uv run` does not appear in the installed CLI.
+Every package reads its version from its own `__init__.py` (`dynamic = ["version"]`
++ `[tool.hatch.version]`), so the number lives in exactly one place.
+
+**`cctk-core` must be bumped whenever its code changes.** `uv` caches built wheels
+by version: at a fixed version, `uv tool install --force` reinstalls the tools
+against the **previously built socle**. The source is right, the binary is stale,
+and nothing says so — a fix verified by `uv run` can be absent from the installed
+CLI. That cost a debugging round on 2026-08-01 (`journal.md` FIX-5).
+
+Bumped, a plain `--force` is enough:
 
 ```bash
-uv cache clean cctk-core
-uv tool install --force --reinstall ./packages/cc-run   # same for the other three
+uv tool install --force ./packages/cc-run   # same for the other three
+```
+
+Bumping only works because every tool pins a lower bound — `cctk-core>=0.2.0` —
+so the resolver **cannot** settle for the cached older wheel. Move the bound with
+the socle; a bump nobody depends on changes nothing.
+
+`packages/cctk-core/tests/test_versioning.py` guards all of it: single source of
+truth, matching installed version, lower bound present, one version across the five
+packages.
+
+If you ever need to reinstall *without* a version change, the cache has to be
+evicted by hand — `uv cache clean cctk-core && uv tool install --force --reinstall …`.
+Bumping is the supported path; this is the escape hatch.
+
+Numbers only prove so much. To settle whether an installed CLI is stale, compare
+content:
+
+```bash
+find packages/cctk-core/src/cctk_core -name '*.py' | sort | xargs cat | sha256sum
+find ~/.local/share/uv/tools/cc-run/lib/python*/site-packages/cctk_core -name '*.py' \
+  | sort | xargs cat | sha256sum
 ```
 
 ## Pricing data

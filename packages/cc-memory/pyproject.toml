@@ -1,9 +1,9 @@
 [project]
 name = "cc-memory"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Search across Claude Code agent memories"
 requires-python = ">=3.12"
-dependencies = ["pydantic>=2.9", "pyyaml>=6.0", "httpx>=0.27", "rich>=13.7", "cctk-core"]
+dependencies = ["pydantic>=2.9", "pyyaml>=6.0", "httpx>=0.27", "rich>=13.7", "cctk-core>=0.2.0"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "pytest-cov>=5.0", "mypy>=1.11", "ruff>=0.6", "types-PyYAML>=6.0"]
@@ -13,6 +13,9 @@ cc-memory = "memory_search.cli:main"
 
 [tool.uv.sources]
 cctk-core = { workspace = true }
+
+[tool.hatch.version]
+path = "src/memory_search/__init__.py"
 
 [build-system]
 requires = ["hatchling"]
