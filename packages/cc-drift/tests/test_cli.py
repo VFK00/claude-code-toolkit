@@ -176,7 +176,7 @@ def test_cli_prog_name_version(capsys):
 def test_cli_affiche_l_ecart_reel_sous_le_seuil(tmp_path, monkeypatch, capsys):
     """Un signal sous le seuil affichait « 0 » en dur, quel que soit l'ecart.
 
-    Mesure du 2026-08-06 sur the-webapp : routes 45 doc / 56 code (19,6 %) et
+    Mesure sur une application Next.js reelle : routes 45 doc / 56 code (19,6 %) et
     tests 931 / 1162 (19,9 %) s'affichaient tous deux « 0 % — OK ». Un drift qui
     monte vers le seuil etait donc invisible jusqu'a le franchir d'un coup.
     """

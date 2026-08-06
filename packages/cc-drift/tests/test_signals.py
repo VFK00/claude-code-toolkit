@@ -293,7 +293,7 @@ def test_tests_async_sont_comptes(tmp_path):
 
 
 def test_valeur_en_gras_suivie_de_precisions(tmp_path):
-    """`- Tests : **931 tests Vitest / 108 fichiers**` — forme de the-webapp."""
+    """`- Tests : **931 tests Vitest / 108 fichiers**` — forme relevee en usage."""
     (tmp_path / "CLAUDE.md").write_text(
         "- Tests : **931 tests Vitest / 108 fichiers** (`pnpm test`, ~3,5 s)\n"
     )
@@ -351,7 +351,7 @@ def test_annee_dans_le_label_nest_pas_prise_pour_un_comptage(tmp_path):
 def test_methodes_de_map_et_set_ne_sont_pas_des_routes(tmp_path):
     """`t.delete(` / `t.get(` sur une Map ne sont pas des routes HTTP.
 
-    Mesure sur the-webapp : les 10 occurrences captees par l'alternative `t\\.`
+    Mesure sur une application Next.js : les 10 occurrences captees par `t\\.`
     etaient 10 faux positifs (Map/Set, dont 5 dans du code genere Prisma).
     """
     (tmp_path / "app.ts").write_text(
@@ -397,7 +397,7 @@ def test_drift_pct_mesure_l_ecart_relatif():
 def test_describe_est_un_groupe_pas_un_test(tmp_path):
     """`describe(` regroupe des cas, il n'en est pas un.
 
-    Mesure du 2026-08-06 sur the-webapp : 1162 « tests » comptes contre **931**
+    Mesure sur une suite Vitest de 108 fichiers : 1162 « tests » comptes contre **931**
     reellement executes par Vitest. L'ecart, 225, est exactement le nombre de
     `describe(` du depot (927 `it/test` + 225 `describe` + 10 e2e = 1162). Un
     faux ecart de 20 % s'installait donc sur tout projet JS structure en suites.
@@ -417,13 +417,13 @@ def test_modele_llm_nest_pas_un_modele_de_donnees(tmp_path):
     """« modele » est ambigu : donnees (ORM) ou LLM. Sans label, ne pas trancher.
 
     Regression du 2026-08-06 : l'assouplissement de la forme inline avait fait
-    lire `**1 modele resident** = small-lm:4b` (docs d'`the-docs-repo`, un modele
+    lire `**1 modele resident** = <nom>` (docs d'infrastructure, un modele
     LLM charge en NPU) comme « 1 modele de donnees documente », et sorti un
     DRIFT a 100 % contre 0 modele reel. La forme inline exige donc de nouveau
     une fermeture immediate ; la forme longue reste lue via le label et son `:`.
     """
     (tmp_path / "CLAUDE.md").write_text(
-        "| FLM | **52625** | NPU | **1 modele resident** = `small-lm:4b` |\n"
+        "| Runtime | **52625** | NPU | **1 modele resident** = `small-lm:4b` |\n"
     )
     doc, _ = extract_doc_signals(tmp_path)
     assert doc.models is None

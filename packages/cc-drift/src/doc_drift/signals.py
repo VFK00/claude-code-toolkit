@@ -17,9 +17,9 @@ from pathlib import Path
 #   - Hono/Koa : app.get(, router.post(
 # `t.` a ete retire de l'alternative : il ne designait aucun framework du
 # commentaire ci-dessus, et captait `t.get(`/`t.delete(` sur n'importe quelle
-# Map ou Set. Mesure du 2026-08-06 sur the-webapp : **10 occurrences, 10 faux
-# positifs**, dont 5 dans du client Prisma genere. Un identifiant d'une lettre
-# est trop courant pour servir de discriminant.
+# Map ou Set. Mesure sur une application Next.js de 400 fichiers : **10
+# occurrences, 10 faux positifs**, dont 5 dans du client Prisma genere. Un
+# identifiant d'une lettre est trop courant pour servir de discriminant.
 ROUTE_RX = re.compile(
     r"@(?:router|app)\.(?:get|post|put|delete|patch|options|head|route|api_route)\b"
     r"|(?:router|app)\.(?:get|post|put|delete|patch)\s*\("
@@ -44,10 +44,11 @@ MODEL_RX = re.compile(
 # `async def test_` est la forme normale sous pytest-asyncio : l'omettre
 # sous-compte tout projet a tests asynchrones, et l'ecart remonte a tort en drift.
 #
-# `describe(` a ete retire : c'est un **groupe** de cas, pas un cas. Mesure du
-# 2026-08-06 sur the-webapp — 1162 comptes contre 931 executes par Vitest, soit
-# exactement les 225 `describe(` du depot en trop (927 `it/test` + 225 + 10 e2e).
-# Tout projet JS structure en suites heritait ainsi d'un faux ecart de 20 %.
+# `describe(` a ete retire : c'est un **groupe** de cas, pas un cas. Mesure sur
+# une suite Vitest de 108 fichiers — 1162 comptes contre 931 reellement
+# executes, soit exactement les 225 `describe(` du depot en trop (927 `it/test`
+# + 225 + 10 e2e). Tout projet JS structure en suites heritait d'un faux ecart
+# de 20 %.
 TEST_RX = re.compile(
     r"^\s*(?:async\s+)?def\s+test_|^\s*it\(|^\s*test\(", re.MULTILINE
 )
@@ -138,7 +139,8 @@ IGNORE_DIRS = {
     "target",
     # Code genere (client Prisma sous `src/generated/`, stubs protobuf...) :
     # ce n'est pas du code du projet, et le compter gonfle les signaux d'autant.
-    # Sur the-webapp il apportait 5 des 10 faux positifs de routes.
+    # Sur l'application Next.js de reference il apportait 5 des 10 faux positifs
+    # de routes.
     "generated",
 }
 
@@ -222,10 +224,11 @@ DOC_LINE_RX = {
 # Formulations telegraphiques compactes : `**30 agents**` ou `**30** agents`.
 #
 # La fermeture `**` reste **exigee** juste apres le mot-cle. Sans label ni `:`,
-# rien ne dit de quoi on parle : ouvrir cette forme avait fait lire
-# `**1 modele resident** = small-lm:4b` (the-docs-repo) comme un modele de donnees,
-# et sortir un DRIFT a 100 % contre 0 modele reel. « modele » designe une table
-# ORM ou un LLM selon le contexte, et ce contexte manque ici. La forme longue
+# rien ne dit de quoi on parle : ouvrir cette forme avait fait lire, dans un
+# depot de documentation d'infrastructure, `**1 modele resident** = <nom>` — un
+# modele de langage charge en memoire — comme un modele de donnees, et sortir un
+# DRIFT a 100 % contre 0 modele reel. « modele » designe une table ORM ou un LLM
+# selon le contexte, et ce contexte manque ici. La forme longue
 # (`- Tests : **931 tests Vitest / 108 fichiers**`) est lue par DOC_LINE_RX, ou
 # le label et son separateur fournissent precisement ce contexte.
 def _inline(word: str) -> re.Pattern[str]:
