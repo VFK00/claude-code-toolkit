@@ -411,3 +411,26 @@ def test_describe_est_un_groupe_pas_un_test(tmp_path):
         "})\n"
     )
     assert extract_code_signals(tmp_path).tests == 2
+
+
+def test_modele_llm_nest_pas_un_modele_de_donnees(tmp_path):
+    """« modele » est ambigu : donnees (ORM) ou LLM. Sans label, ne pas trancher.
+
+    Regression du 2026-08-06 : l'assouplissement de la forme inline avait fait
+    lire `**1 modele resident** = small-lm:4b` (docs d'`the-docs-repo`, un modele
+    LLM charge en NPU) comme « 1 modele de donnees documente », et sorti un
+    DRIFT a 100 % contre 0 modele reel. La forme inline exige donc de nouveau
+    une fermeture immediate ; la forme longue reste lue via le label et son `:`.
+    """
+    (tmp_path / "CLAUDE.md").write_text(
+        "| FLM | **52625** | NPU | **1 modele resident** = `small-lm:4b` |\n"
+    )
+    doc, _ = extract_doc_signals(tmp_path)
+    assert doc.models is None
+
+
+def test_inline_ferme_reste_lu(tmp_path):
+    """Non-regression : `**4 modeles**` garde sa lecture."""
+    (tmp_path / "CLAUDE.md").write_text("Stack : **3 routes**, **4 modeles**, **10 tests**\n")
+    doc, _ = extract_doc_signals(tmp_path)
+    assert (doc.routes, doc.models, doc.tests) == (3, 4, 10)

@@ -219,12 +219,18 @@ DOC_LINE_RX = {
 }
 
 
-# Formulations telegraphiques compactes : `**30 agents**`, `**30** agents`, ou
-# `**931 tests Vitest / 108 fichiers**` — le gras porte la valeur *et* la suite,
-# le mot-cle n'est donc pas colle a un `**` fermant.
+# Formulations telegraphiques compactes : `**30 agents**` ou `**30** agents`.
+#
+# La fermeture `**` reste **exigee** juste apres le mot-cle. Sans label ni `:`,
+# rien ne dit de quoi on parle : ouvrir cette forme avait fait lire
+# `**1 modele resident** = small-lm:4b` (the-docs-repo) comme un modele de donnees,
+# et sortir un DRIFT a 100 % contre 0 modele reel. « modele » designe une table
+# ORM ou un LLM selon le contexte, et ce contexte manque ici. La forme longue
+# (`- Tests : **931 tests Vitest / 108 fichiers**`) est lue par DOC_LINE_RX, ou
+# le label et son separateur fournissent precisement ce contexte.
 def _inline(word: str) -> re.Pattern[str]:
     return re.compile(
-        rf"\*\*(?P<a>\d+)\s+(?:{word})\b|\*\*(?P<b>\d+)\*\*\s*(?:{word})\b",
+        rf"\*\*(?P<a>\d+)\s+(?:{word})\*\*|\*\*(?P<b>\d+)\*\*\s*(?:{word})\b",
         re.IGNORECASE,
     )
 
