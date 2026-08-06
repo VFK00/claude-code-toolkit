@@ -1,3 +1,3 @@
 """cc-memory: search across Claude Code agent memories."""
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"

@@ -3,7 +3,7 @@ name = "cc-drift"
 dynamic = ["version"]
 description = "Detect drift between your CLAUDE.md and the actual code"
 requires-python = ">=3.12"
-dependencies = ["pydantic>=2.9", "rich>=13.7", "cctk-core>=0.2.0"]
+dependencies = ["pydantic>=2.9", "rich>=13.7", "cctk-core>=0.3.0"]
 
 [project.optional-dependencies]
 dev = [

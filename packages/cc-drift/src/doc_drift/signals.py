@@ -15,9 +15,14 @@ from pathlib import Path
 #   - FastAPI/Flask/Express : @router.get, @app.post, router.get(, app.post(
 #   - Next.js App Router handlers : export const GET|POST|PUT|DELETE|PATCH
 #   - Hono/Koa : app.get(, router.post(
+# `t.` a ete retire de l'alternative : il ne designait aucun framework du
+# commentaire ci-dessus, et captait `t.get(`/`t.delete(` sur n'importe quelle
+# Map ou Set. Mesure du 2026-08-06 sur the-webapp : **10 occurrences, 10 faux
+# positifs**, dont 5 dans du client Prisma genere. Un identifiant d'une lettre
+# est trop courant pour servir de discriminant.
 ROUTE_RX = re.compile(
     r"@(?:router|app)\.(?:get|post|put|delete|patch|options|head|route|api_route)\b"
-    r"|(?:router|app|t)\.(?:get|post|put|delete|patch)\s*\("
+    r"|(?:router|app)\.(?:get|post|put|delete|patch)\s*\("
     r"|^export\s+(?:async\s+)?(?:const|function)\s+(?:GET|POST|PUT|DELETE|PATCH|OPTIONS|HEAD)\b",
     re.MULTILINE,
 )
@@ -38,8 +43,13 @@ MODEL_RX = re.compile(
 )
 # `async def test_` est la forme normale sous pytest-asyncio : l'omettre
 # sous-compte tout projet a tests asynchrones, et l'ecart remonte a tort en drift.
+#
+# `describe(` a ete retire : c'est un **groupe** de cas, pas un cas. Mesure du
+# 2026-08-06 sur the-webapp — 1162 comptes contre 931 executes par Vitest, soit
+# exactement les 225 `describe(` du depot en trop (927 `it/test` + 225 + 10 e2e).
+# Tout projet JS structure en suites heritait ainsi d'un faux ecart de 20 %.
 TEST_RX = re.compile(
-    r"^\s*(?:async\s+)?def\s+test_|^\s*it\(|^\s*test\(|^\s*describe\(", re.MULTILINE
+    r"^\s*(?:async\s+)?def\s+test_|^\s*it\(|^\s*test\(", re.MULTILINE
 )
 
 # `model X {` cote Prisma, tolerant a l'accolade rejetee a la ligne suivante.
@@ -126,6 +136,10 @@ IGNORE_DIRS = {
     "coverage",
     "archives",
     "target",
+    # Code genere (client Prisma sous `src/generated/`, stubs protobuf...) :
+    # ce n'est pas du code du projet, et le compter gonfle les signaux d'autant.
+    # Sur the-webapp il apportait 5 des 10 faux positifs de routes.
+    "generated",
 }
 
 
@@ -170,24 +184,54 @@ def extract_code_signals(root: Path) -> CodeSignals:
     return sig
 
 
+# Ligne de liste : `- <label> : <valeur>`.
+#
+# Le gras est la ou se trouvent les chiffres, pas a cote. La doctrine de
+# redaction impose « **Gras** = metriques cles », ce qui produit trois formes
+# qu'aucune version anterieure ne lisait :
+#   - Tests : **931 tests Vitest / 108 fichiers**   (gras apres le separateur)
+#   - **Modeles/Tables : 11** (Site, Audit)         (gras autour du tout)
+#   - Routes API : **45 fichiers `route.ts` / ...** (precisions apres la valeur)
+# Mesure du 2026-08-06 : `cc-drift check --all` rendait « no doc » sur les
+# **36** signaux du workspace, sans jamais lire une seule valeur. L'outil ne
+# pouvait donc signaler aucun drift, et son exit code valait 0 par construction.
+#
+# Trois choix de tolerance, chacun borne pour ne pas inventer de chiffre :
+#   * `(?:\*\*)?` optionnel avant le label et avant la valeur ;
+#   * un qualificatif de 24 caracteres max entre le label et le separateur
+#     (`API`, `/Tables`, `(refonte 2026)`) — tout sauf un `:`, qui delimite ;
+#   * le separateur `:` ou `-` devient **obligatoire**, et seuls des espaces ou
+#     un `**` peuvent le separer du nombre. « - Tests : voir docs/ » ne produit
+#     donc aucune valeur : un renvoi n'est pas un comptage, et `no doc` vaut
+#     mieux qu'un chiffre invente.
+def _line(label: str) -> re.Pattern[str]:
+    return re.compile(
+        rf"(?im)^\s*[-*]\s*(?:\*\*)?(?:{label})[^:\n]{{0,24}}?\s*[:\-]\s*"
+        rf"(?:\*\*)?(?P<value>\d+)"
+    )
+
+
 DOC_LINE_RX = {
-    "routes": re.compile(r"(?im)^\s*[-*]\s*(routes?(?:\s*api)?|endpoints?)\s*[:\-]?\s*(\d+)"),
-    "models": re.compile(r"(?im)^\s*[-*]\s*(mod[ée]l(?:e|es|s)?|mod[ée]les?)\s*[:\-]?\s*(\d+)"),
-    "agents": re.compile(r"(?im)^\s*[-*]\s*(agents?)\s*[:\-]?\s*(\d+)"),
-    "tests": re.compile(r"(?im)^\s*[-*]\s*(tests?)\s*[:\-]?\s*(\d+)"),
+    "routes": _line(r"routes?|endpoints?"),
+    "models": _line(r"mod[ée]l(?:e|es|s)?|tables?"),
+    "agents": _line(r"agents?"),
+    "tests": _line(r"tests?"),
 }
 
-# Formulations telegraphiques compactes : `**30 agents**` (tout en gras) ou `**30** agents`.
+
+# Formulations telegraphiques compactes : `**30 agents**`, `**30** agents`, ou
+# `**931 tests Vitest / 108 fichiers**` — le gras porte la valeur *et* la suite,
+# le mot-cle n'est donc pas colle a un `**` fermant.
 def _inline(word: str) -> re.Pattern[str]:
     return re.compile(
-        rf"\*\*(\d+)\s+{word}\*\*|\*\*(\d+)\*\*\s*{word}",
+        rf"\*\*(?P<a>\d+)\s+(?:{word})\b|\*\*(?P<b>\d+)\*\*\s*(?:{word})\b",
         re.IGNORECASE,
     )
 
 
 DOC_INLINE_RX = {
-    "routes": _inline(r"(?:routes?|endpoints?)"),
-    "models": _inline(r"mod[ée]les?"),
+    "routes": _inline(r"routes?|endpoints?"),
+    "models": _inline(r"mod[ée]les?|tables?"),
     "agents": _inline(r"agents?"),
     "tests": _inline(r"tests?"),
 }
@@ -212,15 +256,23 @@ def extract_doc_signals(root: Path) -> tuple[DocSignals, list[str]]:
             if current is None:
                 m = rx.search(text)
                 if m:
-                    setattr(doc, key, int(m.group(2)))
+                    setattr(doc, key, int(m.group("value")))
         for key, rx in DOC_INLINE_RX.items():
             current = getattr(doc, key)
             if current is None:
                 m = rx.search(text)
                 if m:
-                    value = m.group(1) or m.group(2)
-                    setattr(doc, key, int(value))
+                    setattr(doc, key, int(m.group("a") or m.group("b")))
     return doc, found
+
+
+def drift_pct(doc_v: int, code_v: int) -> float:
+    """Ecart relatif entre doc et code, rapporte au plus grand des deux.
+
+    Extrait de `compute_drifts` pour que l'affichage puisse montrer l'ecart
+    **reel** des signaux sous le seuil, au lieu d'un « 0 » ecrit en dur.
+    """
+    return abs(code_v - doc_v) / max(doc_v, code_v, 1) * 100
 
 
 def compute_drifts(
@@ -239,8 +291,7 @@ def compute_drifts(
             continue
         if doc_v == 0 and code_v == 0:
             continue
-        base = max(doc_v, code_v, 1)
-        pct = abs(code_v - doc_v) / base * 100
+        pct = drift_pct(doc_v, code_v)
         if pct >= threshold:
             drifts.append((label, doc_v, code_v, pct))
     return drifts

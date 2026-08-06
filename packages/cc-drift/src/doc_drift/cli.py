@@ -11,7 +11,7 @@ from rich.console import Console
 from rich.table import Table
 
 from . import __version__
-from .signals import DriftResult, analyze
+from .signals import DriftResult, analyze, drift_pct
 
 DEFAULT_BASE = workspace_root()
 console = Console()
@@ -76,8 +76,11 @@ def print_result(result: DriftResult, threshold: float) -> None:
             status = "[yellow]no doc[/yellow]"
             pct_s = "-"
         else:
+            # Afficher l'ecart reel, pas « 0 » : sous le seuil ne veut pas dire
+            # aligne. Un signal a 19,9 % passait pour parfait jusqu'a franchir
+            # les 25 % d'un coup, sans que rien ne l'ait laisse voir venir.
             status = "[green]OK[/green]"
-            pct_s = "0"
+            pct_s = f"{drift_pct(doc_v, code_v):.0f}"
         table.add_row(label, "-" if doc_v is None else str(doc_v), str(code_v), pct_s, status)
     console.print(table)
     if result.docs_found:

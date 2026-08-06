@@ -171,3 +171,26 @@ def test_cli_prog_name_version(capsys):
         main(["--version"])
     out = capsys.readouterr().out
     assert out.startswith("cc-drift")
+
+
+def test_cli_affiche_l_ecart_reel_sous_le_seuil(tmp_path, monkeypatch, capsys):
+    """Un signal sous le seuil affichait « 0 » en dur, quel que soit l'ecart.
+
+    Mesure du 2026-08-06 sur the-webapp : routes 45 doc / 56 code (19,6 %) et
+    tests 931 / 1162 (19,9 %) s'affichaient tous deux « 0 % — OK ». Un drift qui
+    monte vers le seuil etait donc invisible jusqu'a le franchir d'un coup.
+    """
+    p = tmp_path / "proche"
+    p.mkdir()
+    (p / "app").mkdir()
+    # 5 routes cote code, 4 annoncees : 20 % d'ecart, sous le seuil de 25 %.
+    (p / "app" / "api.py").write_text(
+        "\n".join(f"@router.get('/r{i}')\ndef h{i}(): ..." for i in range(5))
+    )
+    (p / "CLAUDE.md").write_text("- Routes : **4 routes**\n")
+    monkeypatch.chdir(p)
+    rc = main(["check"])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "OK" in out
+    assert "20" in out, out

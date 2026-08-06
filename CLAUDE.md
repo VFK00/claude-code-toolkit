@@ -114,9 +114,11 @@ Numbers only prove so much. To settle whether an installed CLI is stale, compare
 content:
 
 ```bash
-find packages/cctk-core/src/cctk_core -name '*.py' | sort | xargs cat | sha256sum
-find ~/.local/share/uv/tools/cc-run/lib/python*/site-packages/cctk_core -name '*.py' \
-  | sort | xargs cat | sha256sum
+# -print0/-0 : a path containing a space would otherwise split into two
+# arguments and `cat` would fail on both halves.
+find packages/cctk-core/src/cctk_core -name '*.py' -print0 | sort -z | xargs -0 cat | sha256sum
+find ~/.local/share/uv/tools/cc-run/lib/python*/site-packages/cctk_core -name '*.py' -print0 \
+  | sort -z | xargs -0 cat | sha256sum
 ```
 
 ## Pricing data

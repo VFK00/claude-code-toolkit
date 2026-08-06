@@ -251,10 +251,13 @@ def test_fichier_non_test_malgre_sous_chaine_test(tmp_path, nom):
 
 @pytest.mark.parametrize("nom", ["foo.test.ts", "foo.spec.ts", "bar_test.py", "test_bar.py"])
 def test_conventions_de_nommage_reconnues(tmp_path, nom):
+    # Deux `it(` plutot que `describe(` + `it(` : ce test porte sur la
+    # reconnaissance du NOM de fichier, pas sur le comptage. Le `describe(`
+    # n'est plus compte comme un cas (cf. test_describe_est_un_groupe_pas_un_test).
     contenu = (
         "def test_a():\n    pass\ndef test_b():\n    pass\n"
         if nom.endswith(".py")
-        else "describe('x', () => {})\nit('y', () => {})\n"
+        else "it('x', () => {})\nit('y', () => {})\n"
     )
     (tmp_path / nom).write_text(contenu)
     assert extract_code_signals(tmp_path).tests == 2
@@ -279,3 +282,132 @@ def test_tests_async_sont_comptes(tmp_path):
         "def test_c() -> None:\n    pass\n"
     )
     assert extract_code_signals(tmp_path).tests == 3
+
+
+# --- Comptages ecrits en gras -------------------------------------------------
+# La doctrine de redaction VFK impose « **Gras** = metriques cles ». Les regex
+# d'origine n'acceptaient que la forme nue (`- Tests : 931`) ou `**5 agents**` :
+# elles rataient donc TOUTES les lignes reellement ecrites. Mesure du 2026-08-06
+# sur `cc-drift check --all` : 36 signaux « no doc », aucune valeur lue, sur
+# l'ensemble du workspace. L'outil ne pouvait structurellement rien signaler.
+
+
+def test_valeur_en_gras_suivie_de_precisions(tmp_path):
+    """`- Tests : **931 tests Vitest / 108 fichiers**` — forme de the-webapp."""
+    (tmp_path / "CLAUDE.md").write_text(
+        "- Tests : **931 tests Vitest / 108 fichiers** (`pnpm test`, ~3,5 s)\n"
+    )
+    doc, _ = extract_doc_signals(tmp_path)
+    assert doc.tests == 931
+
+
+def test_label_et_valeur_tous_deux_dans_le_gras(tmp_path):
+    """`- **Modeles/Tables : 11** (...)` — le gras englobe label ET valeur."""
+    (tmp_path / "CLAUDE.md").write_text(
+        "- **Modeles/Tables : 11** (Site, Audit, Score, Finding)\n"
+    )
+    doc, _ = extract_doc_signals(tmp_path)
+    assert doc.models == 11
+
+
+def test_label_nu_puis_valeur_en_gras(tmp_path):
+    """`- Routes API : **45 fichiers ...**` — premier nombre apres le label."""
+    (tmp_path / "CLAUDE.md").write_text(
+        "- Routes API : **45 fichiers `route.ts` / 53 handlers HTTP**\n"
+    )
+    doc, _ = extract_doc_signals(tmp_path)
+    assert doc.routes == 45
+
+
+def test_formes_nues_restent_lues(tmp_path):
+    """Non-regression : l'assouplissement ne casse pas l'existant."""
+    (tmp_path / "CLAUDE.md").write_text(
+        "- Routes : 5\n- Modeles : 6\n- Agents : 1\n- Tests : 12\n"
+    )
+    doc, _ = extract_doc_signals(tmp_path)
+    assert (doc.routes, doc.models, doc.agents, doc.tests) == (5, 6, 1, 12)
+
+
+def test_ligne_sans_nombre_ne_produit_pas_de_valeur(tmp_path):
+    """Un renvoi n'est pas un comptage : mieux vaut `no doc` qu'un faux chiffre."""
+    (tmp_path / "CLAUDE.md").write_text(
+        "- Tests : voir `docs/architecture.md`\n- Modeles : cf. schema Prisma\n"
+    )
+    doc, _ = extract_doc_signals(tmp_path)
+    assert doc.tests is None
+    assert doc.models is None
+
+
+def test_annee_dans_le_label_nest_pas_prise_pour_un_comptage(tmp_path):
+    """`- Tests (refonte 2026) : **40 tests**` doit donner 40, pas 2026."""
+    (tmp_path / "CLAUDE.md").write_text("- Tests (refonte 2026) : **40 tests**\n")
+    doc, _ = extract_doc_signals(tmp_path)
+    assert doc.tests == 40
+
+
+# --- Bruit cote code ----------------------------------------------------------
+
+
+def test_methodes_de_map_et_set_ne_sont_pas_des_routes(tmp_path):
+    """`t.delete(` / `t.get(` sur une Map ne sont pas des routes HTTP.
+
+    Mesure sur the-webapp : les 10 occurrences captees par l'alternative `t\\.`
+    etaient 10 faux positifs (Map/Set, dont 5 dans du code genere Prisma).
+    """
+    (tmp_path / "app.ts").write_text(
+        "const t = new Map()\nt.delete('a')\nt.get('b')\n"
+        "const seen = new Set()\nseen.delete('c')\n"
+    )
+    assert extract_code_signals(tmp_path).routes == 0
+
+
+def test_routes_express_et_next_restent_comptees(tmp_path):
+    """Non-regression : les vraies routes restent detectees."""
+    (tmp_path / "server.ts").write_text("app.get('/a', h)\nrouter.post('/b', h)\n")
+    (tmp_path / "route.ts").write_text(
+        "export async function GET() {}\nexport const POST = h\n"
+    )
+    assert extract_code_signals(tmp_path).routes == 4
+
+
+def test_code_genere_est_ignore(tmp_path):
+    """`src/generated/` (client Prisma) n'est pas du code du projet."""
+    gen = tmp_path / "src" / "generated" / "prisma"
+    gen.mkdir(parents=True)
+    (gen / "Audit.ts").write_text("export async function GET() {}\nt.delete('x')\n")
+    (tmp_path / "src").joinpath("vrai.ts").write_text("export async function POST() {}")
+    sig = extract_code_signals(tmp_path)
+    assert sig.routes == 1
+    assert sig.files_scanned == 1
+
+
+# --- Ecart affiche sous le seuil ---------------------------------------------
+
+
+def test_drift_pct_mesure_l_ecart_relatif():
+    """L'ecart se rapporte au plus grand des deux, borne a 1 pour eviter /0."""
+    from doc_drift.signals import drift_pct
+
+    assert drift_pct(45, 56) == pytest.approx(19.64, abs=0.01)
+    assert drift_pct(11, 11) == 0.0
+    assert drift_pct(0, 0) == 0.0
+    assert drift_pct(0, 4) == 100.0
+
+
+def test_describe_est_un_groupe_pas_un_test(tmp_path):
+    """`describe(` regroupe des cas, il n'en est pas un.
+
+    Mesure du 2026-08-06 sur the-webapp : 1162 « tests » comptes contre **931**
+    reellement executes par Vitest. L'ecart, 225, est exactement le nombre de
+    `describe(` du depot (927 `it/test` + 225 `describe` + 10 e2e = 1162). Un
+    faux ecart de 20 % s'installait donc sur tout projet JS structure en suites.
+    """
+    (tmp_path / "a.test.ts").write_text(
+        "describe('groupe', () => {\n"
+        "  describe('sous-groupe', () => {\n"
+        "    it('cas 1', () => {})\n"
+        "    it('cas 2', () => {})\n"
+        "  })\n"
+        "})\n"
+    )
+    assert extract_code_signals(tmp_path).tests == 2
